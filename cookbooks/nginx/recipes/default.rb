@@ -116,8 +116,8 @@ when 'debian'
 	bash 'create symlinks for sites configs' do
         user 'root'
         code <<-EOF
-			ln -sf /etc/nginx/sites-available/site1.conf /etc/nginx/sites-enabled/site1.conf
-			ln -sf /etc/nginx/sites-available/site2.conf /etc/nginx/sites-enabled/site2.conf
+		ln -sf /etc/nginx/sites-available/site1.conf /etc/nginx/sites-enabled/site1.conf
+		ln -sf /etc/nginx/sites-available/site2.conf /etc/nginx/sites-enabled/site2.conf
         EOF
 	end
 	file '/etc/nginx/sites-enabled/default' do
