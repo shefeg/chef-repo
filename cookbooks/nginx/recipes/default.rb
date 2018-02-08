@@ -30,17 +30,17 @@ when 'debian'
 	end
 
 	file '/var/www/site1/index.html' do
-        	content 'Hello world 1'
-        	mode '0755'
-        	owner 'www-data'
-        	group 'www-data'
+        content 'Hello world 1'
+        mode '0755'
+        owner 'www-data'
+        group 'www-data'
 	end
 
 	file '/var/www/site2/index.html' do
-        	content 'Hello world 2'
-        	mode '0755'
-        	owner 'www-data'
-        	group 'www-data'
+        content 'Hello world 2'
+        mode '0755'
+        owner 'www-data'
+        group 'www-data'
 	end
 when 'rhel'
 	%w[ /var/www /var/www/site1 /var/www/site2 ].each do |path|
@@ -53,22 +53,22 @@ when 'rhel'
 
 	file '/var/www/site1/index.html' do
 		content 'Hello world 1'
-        	mode '0755'
-        	owner 'nginx'
-        	group 'nginx'
+        mode '0755'
+        owner 'nginx'
+        group 'nginx'
 	end
 
 	file '/var/www/site2/index.html' do
-        	content 'Hello world 2'
-        	mode '0755'
-        	owner 'nginx'
-        	group 'nginx'
+        content 'Hello world 2'
+        mode '0755'
+        owner 'nginx'
+        group 'nginx'
 	end
 end
 
 directory '/etc/nginx/sites-available' do
-    	owner 'root'
-    	group 'root'
+    owner 'root'
+    group 'root'
 	mode '0755'
 	action :create
 end
@@ -124,19 +124,19 @@ when 'debian'
 	bash 'create symlinks for sites configs' do
         user 'root'
         code <<-EOF
-		ln -sf /etc/nginx/sites-available/site1.conf /etc/nginx/sites-enabled/site1.conf
-		ln -sf /etc/nginx/sites-available/site2.conf /etc/nginx/sites-enabled/site2.conf
-        	EOF
+		    ln -sf /etc/nginx/sites-available/site1.conf /etc/nginx/sites-enabled/site1.conf
+		    ln -sf /etc/nginx/sites-available/site2.conf /etc/nginx/sites-enabled/site2.conf
+        EOF
 	end
 	file '/etc/nginx/sites-enabled/default' do
 		action :delete
 	end
 when 'rhel'
 	bash 'create symlinks for sites configs' do
-        	user 'root'
-        	code <<-EOF
-            		ln -sf /etc/nginx/sites-available/site1.conf /etc/nginx/conf.d/site1.conf
-            		ln -sf /etc/nginx/sites-available/site2.conf /etc/nginx/conf.d/site2.conf
+        user 'root'
+        code <<-EOF
+           	ln -sf /etc/nginx/sites-available/site1.conf /etc/nginx/conf.d/site1.conf
+           	ln -sf /etc/nginx/sites-available/site2.conf /etc/nginx/conf.d/site2.conf
 		EOF
 	end
 end
