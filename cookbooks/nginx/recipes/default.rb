@@ -4,11 +4,19 @@
 #
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
+case node['platform_family']
+when 'rhel'
+    package 'epel-release' do
+        action [:install]
+    end
+end
+
 package 'nginx' do
+    action [:install]
 end
 
 service 'nginx' do
-        action [ :enable ]
+    action [:enable]
 end
 
 case node['platform_family']
@@ -134,5 +142,5 @@ when 'rhel'
 end
 
 service 'nginx' do
-	action [ :restart ]
+	action [:restart]
 end
