@@ -144,3 +144,15 @@ end
 service 'nginx' do
 	action [:restart]
 end
+
+bash 'verify sites availability' do
+    user 'root'
+    code <<-EOF
+    echo -e "$(hostname -I | cut -d' ' -f1) site1.com\n$(hostname -I | cut -d' ' -f1) site2.com" >> /etc/hosts
+    if [[ $(curl site1.com) = *"Hello world"* ]] && [[ $(curl site1.com) = *"Hello world"* ]]; then
+        echo "SUCCESS!"
+    else
+        exit 1
+    fi
+    EOF
+end
