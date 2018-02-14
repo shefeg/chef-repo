@@ -149,13 +149,12 @@ bash 'verify sites availability' do
     user 'root'
     code <<-EOF
     echo -e "$(hostname -I | cut -d' ' -f1) site1.com\n$(hostname -I | cut -d' ' -f1) site2.com" >> /etc/hosts
-    if [[ $(curl site1.com) = *"Hello world"* ]] && [[ $(curl site1.com) = *"Hello world"* ]]; then
+    if [[ $(curl site1.com) = *"Hello world"* ]] && [[ $(curl site2.com) = *"Hello world"* ]]; then
         echo "SUCCESS!"
         sed -i '/site*/d' /etc/hosts
     else
         sed -i '/site*/d' /etc/hosts
         exit 1
     fi
-
     EOF
 end
