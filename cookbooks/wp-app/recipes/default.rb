@@ -14,9 +14,9 @@ when 'debian'
   end
 
   apt_update 'update'
-    
+
   package 'required packages' do
-    package_name ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli', 
+    package_name ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli',
                   'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl'
                  ]
     action :install
@@ -27,7 +27,7 @@ when 'rhel'
   package 'epel-release' do
     action [:install]
   end
-  
+
   bash 'install mysql repo' do
     user 'root'
     code <<-EOH
@@ -38,7 +38,7 @@ when 'rhel'
   end
 
   package 'required packages' do
-    package_name ['mysql', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring', 
+    package_name ['mysql', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
                   'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl'
                  ]
     action :install
