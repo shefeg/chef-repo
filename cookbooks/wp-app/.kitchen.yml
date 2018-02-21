@@ -1,6 +1,10 @@
 ---
 driver:
   name: vagrant
+#  name: docker
+#  binary: docker.exe
+#  socket: npipe:////./pipe/docker_engine
+#  use_sudo: false
 
 provisioner:
   name: chef_zero
