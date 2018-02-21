@@ -122,3 +122,4 @@ nodes
 
 # ## Office Temp Files
 # ~$*
+.kitchen/logs/kitchen.log
