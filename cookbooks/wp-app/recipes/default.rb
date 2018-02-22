@@ -102,7 +102,7 @@ when 'debian'
     owner 'www-data'
     group 'www-data'
     mode '0755'
-    action :create_if_missing
+    action :create
   end
 
 #---- RHEL ----
@@ -123,7 +123,7 @@ when 'rhel'
     owner 'apache'
     group 'apache'
     mode '0755'
-    action :create_if_missing
+    action :create
   end
 end
 
@@ -148,7 +148,7 @@ cookbook_file '/var/www/html/db_setup.sql' do
   owner 'root'
   group 'root'
   mode '0755'
-  action :create_if_missing
+  action :create
   notifies :run, 'bash[import db settings]', :immediately
   ignore_failure true
 end
