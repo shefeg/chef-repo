@@ -149,7 +149,6 @@ cookbook_file '/var/www/html/db_setup.sql' do
   group 'root'
   mode '0755'
   action :create
-  notifies :run, 'bash[import db settings]', :immediately
   ignore_failure true
 end
 
@@ -162,7 +161,7 @@ bash 'import db settings' do
   while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do \
   echo "SSH failed, retrying..." >&2 && sleep 5; done
   EOH
-  action :nothing
+  action :run
 end
 
 bash 'verify wp login' do
