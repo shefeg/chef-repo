@@ -159,8 +159,8 @@ bash 'import db settings' do
   DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   DB_PASSWORD=$(grep "DB_PASSWORD" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  
-  mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql
+  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do \
+  echo "SSH failed, retrying..." >&2 && sleep 5; done
   EOH
   action :nothing
 end
@@ -174,7 +174,6 @@ bash 'verify wp login' do
   DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   WP_LOGIN=$(curl -v --data "log=$DB_USER&pwd=$DB_PASSWORD&wp-submit=Log+In&testcookie=1" \
   --cookie 'wordpress_test_cookie=WP+Cookie+check' http://localhost/wp-login.php 2>&1 | cat)
-  
   if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
     echo "LOG IN TO WORDPRESS IS SUCCESSFULL"
   else
