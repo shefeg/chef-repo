@@ -18,7 +18,7 @@ when 'debian'
 
   package 'required packages' do
     package_name ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli',
-                  'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl'
+                  'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'awscli'
                  ]
     action :install
   end
@@ -127,6 +127,20 @@ when 'rhel'
   end
 end
 
+# This parameters is specifically for CircleCI
+# RDS Name is hardcoded in bash parameter
+bash 'populate RDS endpoint to wp-config' do
+  code <<-EOH
+  RDS_NAME="db-wp"
+  RDS_HOST="$(aws rds describe-db-instances --db-instance-identifier $RDS_NAME --query 'DBInstances[*].Endpoint.Address' \
+  --region us-east-1 | tr -d '\n[]", ')"
+  WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
+  sed -i "/DB_HOST/c\\$WP_CONFIG_RDS" wp-config.php
+  EOH
+  action :run
+  ignore_failure true
+end
+
 file '/var/www/html/index.html' do
   action :delete
 end
@@ -149,7 +163,6 @@ cookbook_file '/var/www/html/db_setup.sql' do
   group 'root'
   mode '0755'
   action :create
-  notifies :run, 'bash[import db settings]', :immediately
   ignore_failure true
 end
 
@@ -159,10 +172,10 @@ bash 'import db settings' do
   DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   DB_PASSWORD=$(grep "DB_PASSWORD" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  
-  mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql
+  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do \
+  echo "SSH failed, retrying..." >&2 && sleep 5; done
   EOH
-  action :nothing
+  action :run
 end
 
 bash 'verify wp login' do
@@ -174,7 +187,6 @@ bash 'verify wp login' do
   DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   WP_LOGIN=$(curl -v --data "log=$DB_USER&pwd=$DB_PASSWORD&wp-submit=Log+In&testcookie=1" \
   --cookie 'wordpress_test_cookie=WP+Cookie+check' http://localhost/wp-login.php 2>&1 | cat)
-  
   if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
     echo "LOG IN TO WORDPRESS IS SUCCESSFULL"
   else
