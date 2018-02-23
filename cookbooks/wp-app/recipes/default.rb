@@ -131,7 +131,7 @@ bash 'populate RDS endpoint to wp-config' do
   code <<-EOH
   RDS_HOST="$(cat /home/ubuntu/rds_endpoint.txt)"
   WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
-  sed -i "/DB_HOST/c\\$WP_CONFIG_RDS" wp-config.php
+  sed -i -e "/DB_HOST/c\${WP_CONFIG_RDS}" /var/www/html/wp-config.php
   EOH
   action :run
 end
