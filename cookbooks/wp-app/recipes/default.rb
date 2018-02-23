@@ -127,18 +127,13 @@ when 'rhel'
   end
 end
 
-# This parameters is specifically for CircleCI
-# RDS Name is hardcoded in bash parameter
 bash 'populate RDS endpoint to wp-config' do
   code <<-EOH
-  RDS_NAME="db-wp"
-  RDS_HOST="$(aws rds describe-db-instances --db-instance-identifier $RDS_NAME --query 'DBInstances[*].Endpoint.Address' \
-  --region us-east-1 | tr -d '\n[]", ')"
+  RDS_HOST=$(grep -i "rds" /home/ubuntu/environment.txt | cut -d' ' -f 3)
   WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
   sed -i "/DB_HOST/c\\$WP_CONFIG_RDS" wp-config.php
   EOH
   action :run
-  ignore_failure true
 end
 
 file '/var/www/html/index.html' do
