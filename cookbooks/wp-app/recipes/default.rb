@@ -46,7 +46,7 @@ when 'rhel'
   end
 end
 
-bash 'name' do
+bash 'AWS cli installation' do
   user 'root'
   code <<-EOH
   if [[! $(aws --version) ]]; then
@@ -54,6 +54,8 @@ bash 'name' do
     unzip awscli-bundle.zip
     ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
     aws --version
+  else
+    echo "AWS cli is installed"
   fi
   EOH
   action :run
