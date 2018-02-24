@@ -44,21 +44,21 @@ when 'rhel'
                  ]
     action :install
   end
-end
 
-bash 'AWS cli installation' do
-  user 'root'
-  code <<-EOH
-  if [[! $(aws --version) ]]; then
-    curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-    unzip awscli-bundle.zip
-    ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
-    aws --version
-  else
-    echo "AWS cli is installed"
-  fi
-  EOH
-  action :run
+  bash 'AWS cli installation' do
+    user 'root'
+    code <<-EOH
+    if [[! $(aws --version) ]]; then
+      curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+      unzip awscli-bundle.zip
+      ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+      aws --version
+    else
+      echo "AWS cli is installed"
+    fi
+    EOH
+    action :run
+  end
 end
 
 service 'apache2' do
