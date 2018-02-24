@@ -59,7 +59,6 @@ bash 'name' do
   action :run
 end
 
-
 service 'apache2' do
   case node['platform_family']
   #---- DEBIAN ----
