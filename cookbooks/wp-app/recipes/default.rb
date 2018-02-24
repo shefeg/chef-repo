@@ -40,11 +40,25 @@ when 'rhel'
 
   package 'required packages' do
     package_name ['mysql', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
-                  'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl'
+                  'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'unzip'
                  ]
     action :install
   end
 end
+
+bash 'name' do
+  user 'root'
+  code <<-EOH
+  if [[! $(aws --version) ]]; then
+    curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+    unzip awscli-bundle.zip
+    ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+    aws --version
+  fi
+  EOH
+  action :run
+end
+
 
 service 'apache2' do
   case node['platform_family']
@@ -128,6 +142,7 @@ when 'rhel'
 end
 
 bash 'populate RDS endpoint to wp-config' do
+  user 'root'
   code <<-EOH
   RDS_HOST="$(cat /home/ubuntu/rds_endpoint.txt)"
   WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
