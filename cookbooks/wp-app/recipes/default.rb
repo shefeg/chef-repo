@@ -168,8 +168,7 @@ bash 'import db settings' do
   DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   DB_PASSWORD=$(grep "DB_PASSWORD" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do \
-  echo "DB import failed, retrying..." >&2 && sleep 5; done
+  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do echo "DB import failed, retrying..."; sleep 5; done
   EOH
   action :run
 end
