@@ -18,7 +18,7 @@ when 'debian'
 
   package 'required packages' do
     package_name ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli',
-                  'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'awscli'
+                  'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl'
                  ]
     action :install
   end
@@ -43,21 +43,6 @@ when 'rhel'
                   'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'unzip'
                  ]
     action :install
-  end
-
-  bash 'AWS cli installation' do
-    user 'root'
-    code <<-EOH
-    if [[! $(aws --version) ]]; then
-      curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-      unzip awscli-bundle.zip
-      ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
-      aws --version
-    else
-      echo "AWS cli is installed"
-    fi
-    EOH
-    action :run
   end
 end
 
