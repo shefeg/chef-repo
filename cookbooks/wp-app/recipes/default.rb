@@ -155,8 +155,8 @@ end
 bash 'populate RDS and EC2 endpoints to wp-config' do
   user 'root'
   code <<-EOH
-  RDS_HOST="$(cat /home/ubuntu/rds_endpoint.txt)"
-  EC2_HOST="$(cat /home/ubuntu/ec2_endpoint.txt)"
+  RDS_HOST="$(cat /tmp/rds_endpoint.txt)"
+  EC2_HOST="$(cat /tmp/ec2_endpoint.txt)"
   WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
   WP_CONFIG_HOME="define('WP_HOME','http://$EC2_HOST');"
   WP_CONFIG_SITE_URL="define('WP_SITEURL','http://$EC2_HOST');"
