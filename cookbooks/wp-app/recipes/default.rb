@@ -73,6 +73,7 @@ when 'rhel'
   end
   
   bash 'set SELINUX to permissive' do
+    user 'root'
     code <<-EOH
     sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/sysconfig/selinux
     EOH
