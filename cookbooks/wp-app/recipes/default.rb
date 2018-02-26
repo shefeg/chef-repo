@@ -127,12 +127,15 @@ when 'rhel'
   end
 end
 
-bash 'populate RDS endpoint to wp-config' do
+bash 'populate RDS and EC2 endpoints to wp-config' do
   user 'root'
   code <<-EOH
   RDS_HOST="$(cat /home/ubuntu/rds_endpoint.txt)"
+  EC2_HOST="$(cat /home/ubuntu/ec2_endpoint.txt)"
   WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
+  WP_CONFIG_EC2="define('WP_HOME','http://$RDS_HOST');\ndefine('WP_SITEURL','http://$RDS_HOST');"
   sed -i -e "/DB_HOST/c\${WP_CONFIG_RDS}" /var/www/html/wp-config.php
+  echo -e $WP_CONFIG_EC2 >> /var/www/html/wp-config.php
   EOH
   action :run
 end
