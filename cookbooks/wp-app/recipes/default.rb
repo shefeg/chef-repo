@@ -62,10 +62,11 @@ when 'rhel'
  #                ]
  #   action :install
  # end
-  bash 'install packages' do
+
+  bash 'install required packages' do
     user 'root'
     code <<-EOH
-    yum --enablerepo=remi,remi-php72 install -y php php-common php-mysql php-gd php-xml php-mbstring php-mcrypt php-xmlrpc
+    yum --enablerepo=remi,remi-php72 install -y mysql php php-common php-mysql php-gd php-xml php-mbstring php-mcrypt php-xmlrpc
     EOH
     action :run
     ignore_failure true
@@ -194,6 +195,7 @@ cookbook_file '/var/www/html/db_setup.sql' do
 end
 
 bash 'import db settings' do
+  user 'root'
   code <<-EOH
   DB_NAME=$(grep "DB_NAME" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
