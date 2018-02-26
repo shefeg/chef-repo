@@ -75,7 +75,7 @@ when 'rhel'
   bash 'set SELINUX to permissive' do
     user 'root'
     code <<-EOH
-    sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/sysconfig/selinux
+    setenforce 0
     EOH
     action :run
     ignore_failure true
