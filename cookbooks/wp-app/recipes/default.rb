@@ -25,24 +25,50 @@ when 'debian'
 
 #---- RHEL ----
 when 'rhel'
-  package 'epel-release' do
-    action [:install]
+  #package 'epel-release' do   # works on Centos but not on RHEL
+  #  action [:install]
+  #end
+
+  bash 'install epel repo' do
+    user 'root'
+    code <<-EOH
+    rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    EOH
+    action :run
+    ignore_failure true
   end
 
   bash 'install mysql repo' do
     user 'root'
     code <<-EOH
-    wget -nc https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
-    rpm -ivh mysql57-community-release-el7-9.noarch.rpm
+    rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
     EOH
     action :run
+    ignore_failure true
   end
 
-  package 'required packages' do
-    package_name ['mysql', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
-                  'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'unzip'
-                 ]
-    action :install
+  bash 'install php repo' do
+    user 'root'
+    code <<-EOH
+    rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
+    EOH
+    action :run
+    ignore_failure true
+  end
+
+ # package 'required packages' do
+ #   package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
+ #                 'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'unzip'
+ #                ]
+ #   action :install
+ # end
+  bash 'install packages' do
+    user 'root'
+    code <<-EOH
+    yum --enablerepo=remi,remi-php72 install -y php php-common php-mysql php-gd php-xml php-mbstring php-mcrypt php-xmlrpc
+    EOH
+    action :run
+    ignore_failure true
   end
 end
 
@@ -57,7 +83,6 @@ service 'apache2' do
   end
   action [:enable, :start]
 end
-
 
 bash 'verify php' do
   user 'root'
