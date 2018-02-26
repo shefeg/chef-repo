@@ -56,7 +56,7 @@ when 'rhel'
     ignore_failure true
   end
 
- # package 'required packages' do
+ # package 'required packages' do 
  #   package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
  #                 'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'unzip'
  #                ]
@@ -77,6 +77,7 @@ when 'rhel'
     sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/sysconfig/selinux
     EOH
     action :run
+    ignore_failure true
   end
   
 end
