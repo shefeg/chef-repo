@@ -29,33 +29,6 @@ when 'rhel'
   #  action [:install]
   #end
 
-  bash 'install epel repo' do
-    user 'root'
-    code <<-EOH
-    rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-    EOH
-    action :run
-    ignore_failure true
-  end
-
-  bash 'install mysql repo' do
-    user 'root'
-    code <<-EOH
-    rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
-    EOH
-    action :run
-    ignore_failure true
-  end
-
-  bash 'install php repo' do
-    user 'root'
-    code <<-EOH
-    rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
-    EOH
-    action :run
-    ignore_failure true
-  end
-
  # package 'required packages' do 
  #   package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
  #                 'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'unzip'
@@ -66,6 +39,9 @@ when 'rhel'
   bash 'install required packages' do
     user 'root'
     code <<-EOH
+    rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
+    rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
     yum --enablerepo=remi,remi-php72 install -y mysql php php-common php-mysql php-gd php-xml php-mbstring php-mcrypt php-xmlrpc
     EOH
     action :run
