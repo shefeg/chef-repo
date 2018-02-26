@@ -80,7 +80,6 @@ when 'rhel'
     action :run
     ignore_failure true
   end
-  
 end
 
 service 'apache2' do
