@@ -71,6 +71,14 @@ when 'rhel'
     action :run
     ignore_failure true
   end
+  
+  bash 'set SELINUX to permissive' do
+    code <<-EOH
+    sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/sysconfig/selinux
+    EOH
+    action :run
+  end
+  
 end
 
 service 'apache2' do
@@ -194,17 +202,17 @@ cookbook_file '/var/www/html/db_setup.sql' do
   ignore_failure true
 end
 
-# bash 'import db settings' do
-#   user 'root'
-#   code <<-EOH
-#   DB_NAME=$(grep "DB_NAME" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-#   DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-#   DB_PASSWORD=$(grep "DB_PASSWORD" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-#   DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-#   while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do echo "DB import failed, retrying..."; sleep 5; done
-#   EOH
-#   action :run
-# end
+bash 'import db settings' do
+  user 'root'
+  code <<-EOH
+  DB_NAME=$(grep "DB_NAME" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_PASSWORD=$(grep "DB_PASSWORD" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do echo "DB import failed, retrying..."; sleep 5; done
+  EOH
+  action :run
+end
 
 bash 'verify wp login' do
   user 'root'
