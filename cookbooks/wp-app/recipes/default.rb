@@ -4,8 +4,8 @@
 #
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
-wp_content_dir = '/var/www'
-ENV['WP_CONTENT_DIR'] = '/var/www'
+wp_content_dir = '/var/www/html'
+ENV['WP_CONTENT_DIR'] = '/var/www/html'
 
 case node['platform_family']
 #---- DEBIAN ----
