@@ -25,30 +25,39 @@ when 'debian'
 
 #---- RHEL ----
 when 'rhel'
-  #package 'epel-release' do   # works on Centos but not on RHEL
-  #  action [:install]
-  #end
+  node['repository']['files'].each do |pkg,src|
+    remote_file "/tmp/#{pkg}" do
+      source src
+      owner 'root'
+      group 'root'
+      mode '0755'
+      action :create_if_missing
+    end
+    rpm_package pkg do
+      source "/tmp/#{pkg}"
+      action :install
+    end
+  end
 
- # package 'required packages' do 
- #   package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
- #                 'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'unzip'
- #                ]
- #   action :install
- # end
+  bash 'enable remi repo' do
+    user 'root'
+    code <<-EOH
+    sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/{remi.repo,remi-php72.repo}
+    EOH
+    action :run
+    ignore_failure true
+  end
 
   bash 'install required packages' do
     user 'root'
     code <<-EOH
-    rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-    rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
-    rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
     yum --enablerepo=remi,remi-php72 install -y mysql php php-common php-mysql php-gd php-xml php-mbstring php-mcrypt php-xmlrpc
     EOH
     action :run
     ignore_failure true
   end
-  
-  bash 'set SELINUX to permissive' do
+
+  bash 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
     code <<-EOH
     setenforce 0
@@ -56,7 +65,7 @@ when 'rhel'
     action :run
     ignore_failure true
   end
-end
+ end
 
 service 'apache2' do
   case node['platform_family']
@@ -70,7 +79,7 @@ service 'apache2' do
   action [:enable, :start]
 end
 
-bash 'verify php' do
+bash 'verify PHP installation' do
   user 'root'
   code <<-EOH
   cat <<EOF > /var/www/html/info.php
