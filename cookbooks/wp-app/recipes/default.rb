@@ -27,8 +27,8 @@ when 'debian'
 #---- RHEL ----
 when 'rhel'
   # install additional repositories
-  node['repository']['files'].each do |pkg,src|
-    remote_file '/tmp/#{pkg}' do
+  node['repository']['files'].each do |pkg, src|
+    remote_file "/tmp/#{pkg}" do
       source src
       owner 'root'
       group 'root'
@@ -36,7 +36,7 @@ when 'rhel'
       action :create_if_missing
     end
     rpm_package pkg do
-      source '/tmp/#{pkg}'
+      source "/tmp/#{pkg}"
       action :install
     end
   end
