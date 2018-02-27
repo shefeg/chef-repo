@@ -26,7 +26,7 @@ when 'debian'
 
 #---- RHEL ----
 when 'rhel'
-  # install additional repositories
+  # install additional repositories listed in attributes file
   node['repository']['files'].each do |pkg, src|
     remote_file "/tmp/#{pkg}" do
       source src
@@ -50,7 +50,7 @@ when 'rhel'
   end
 
   package 'install required packages' do 
-   package_name ['mysql', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
+   package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
                  'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd'
                 ]
    action :install
