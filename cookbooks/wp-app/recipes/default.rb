@@ -4,6 +4,8 @@
 #
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
+wp_content_dir = '/var/www'
+ENV['WP_CONTENT_DIR'] = '/var/www'
 
 case node['platform_family']
 #---- DEBIAN ----
@@ -27,7 +29,7 @@ when 'debian'
 when 'rhel'
   # install additional repositories
   node['repository']['files'].each do |pkg,src|
-    remote_file "/tmp/#{pkg}" do
+    remote_file '/tmp/#{pkg}' do
       source src
       owner 'root'
       group 'root'
@@ -35,7 +37,7 @@ when 'rhel'
       action :create_if_missing
     end
     rpm_package pkg do
-      source "/tmp/#{pkg}"
+      source '/tmp/#{pkg}'
       action :install
     end
   end
@@ -81,7 +83,7 @@ end
 bash 'verify PHP installation' do
   user 'root'
   code <<-EOH
-  cat <<EOF > /var/www/html/info.php
+  cat <<EOF > $WP_CONTENT_DIR/info.php
   <?php
   phpinfo();
   ?>
@@ -105,18 +107,18 @@ end
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
-  bash 'copy wp content' do
+  bash 'copy WP content' do
     user 'root'
     code <<-EOH
     tar -xzf /root/latest.tar.gz -C /root
-    rsync -av /root/wordpress/* /var/www/html/
-    chown -R www-data:www-data /var/www/html/
-    chmod -R 755 /var/www/html/
+    rsync -av /root/wordpress/* $WP_CONTENT_DIR/
+    chown -R www-data:www-data $WP_CONTENT_DIR
+    chmod -R 755 $WP_CONTENT_DIR
     EOH
     action :run
   end
 
-  cookbook_file '/var/www/html/wp-config.php' do
+  cookbook_file "#{wp_content_dir}/wp-config.php" do
     source 'wp-config.php'
     owner 'www-data'
     group 'www-data'
@@ -130,14 +132,15 @@ when 'rhel'
     user 'root'
     code <<-EOH
     tar -xzf /root/latest.tar.gz -C /root
-    rsync -av /root/wordpress/* /var/www/html/
-    chown -R apache:apache /var/www/html/
-    chmod -R 755 /var/www/html/
+    rsync -av /root/wordpress/* $WP_CONTENT_DIR
+    chown -R apache:apache $WP_CONTENT_DIR
+    chmod -R 755 $WP_CONTENT_DIR
     EOH
     action :run
   end
 
-  cookbook_file '/var/www/html/wp-config.php' do
+  # create wp-config.php file from template
+  cookbook_file "#{wp_content_dir}/wp-config.php" do
     source 'wp-config.php'
     owner 'apache'
     group 'apache'
@@ -154,15 +157,15 @@ bash 'populate RDS and EC2 endpoints to wp-config' do
   WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
   WP_CONFIG_HOME="define('WP_HOME','http://$EC2_HOST');"
   WP_CONFIG_SITE_URL="define('WP_SITEURL','http://$EC2_HOST');"
-  sed -i -e "/DB_HOST/c\${WP_CONFIG_RDS}" /var/www/html/wp-config.php
-  sed -i -e '/WP_HOME/d' -e '/WP_SITEURL/d' /var/www/html/wp-config.php
-  echo "\n${WP_CONFIG_HOME}" >> /var/www/html/wp-config.php
-  echo "${WP_CONFIG_SITE_URL}\n" >> /var/www/html/wp-config.php
+  sed -i -e "/DB_HOST/c\${WP_CONFIG_RDS}" $WP_CONTENT_DIR/wp-config.php
+  sed -i -e '/WP_HOME/d' -e '/WP_SITEURL/d' $WP_CONTENT_DIR/wp-config.php
+  echo "\n${WP_CONFIG_HOME}" >> $WP_CONTENT_DIR/wp-config.php
+  echo "${WP_CONFIG_SITE_URL}\n" >> $WP_CONTENT_DIR/wp-config.php
   EOH
   action :run
 end
 
-file '/var/www/html/index.html' do
+file "#{wp_content_dir}/index.html" do
   action :delete
 end
 
@@ -178,7 +181,7 @@ service 'apache2' do
   action :restart
 end
 
-cookbook_file '/var/www/html/db_setup.sql' do
+cookbook_file "#{wp_content_dir}/db_setup.sql" do
   source 'db_setup.sql'
   owner 'root'
   group 'root'
@@ -190,11 +193,11 @@ end
 bash 'import db settings' do
   user 'root'
   code <<-EOH
-  DB_NAME=$(grep "DB_NAME" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  DB_PASSWORD=$(grep "DB_PASSWORD" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < /var/www/html/db_setup.sql; do echo "DB import failed, retrying..."; sleep 5; done
+  DB_NAME=$(grep "DB_NAME" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_USER=$(grep "DB_USER" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_PASSWORD=$(grep "DB_PASSWORD" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_HOST=$(grep "DB_HOST" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql; do echo "DB import failed, retrying..."; sleep 5; done
   EOH
   action :run
 end
@@ -202,10 +205,10 @@ end
 bash 'verify wp login' do
   user 'root'
   code <<-EOH
-  DB_NAME=$(grep "DB_NAME" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  DB_USER=$(grep "DB_USER" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  DB_PASSWORD=$(grep "DB_PASSWORD" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  DB_HOST=$(grep "DB_HOST" /var/www/html/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_NAME=$(grep "DB_NAME" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_USER=$(grep "DB_USER" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_PASSWORD=$(grep "DB_PASSWORD" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
+  DB_HOST=$(grep "DB_HOST" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
   WP_LOGIN=$(curl -v --data "log=$DB_USER&pwd=$DB_PASSWORD&wp-submit=Log+In&testcookie=1" \
   --cookie 'wordpress_test_cookie=WP+Cookie+check' http://localhost/wp-login.php 2>&1 | cat)
   if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
