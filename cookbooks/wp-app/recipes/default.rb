@@ -87,9 +87,9 @@ bash 'verify PHP installation' do
   ?>
   EOF
   if [[ $(curl localhost/info.php) = *"PHP Version 7"* ]]; then
-      echo "SUCCESS!"
+    echo "SUCCESS!"
   else
-      exit 1
+    exit 1
   fi
   EOH
 end
