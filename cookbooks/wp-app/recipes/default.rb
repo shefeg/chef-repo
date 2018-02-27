@@ -4,7 +4,6 @@
 #
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
-wp_content_dir = '/var/www/html'
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 
 case node['platform_family']
@@ -45,10 +44,9 @@ when 'rhel'
   bash 'enable remi-php72 repo' do
     user 'root'
     code <<-EOH
-    sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/remi-php72.repo
+    sed -i 's/enabled=.*/enabled=1/' /etc/yum.repos.d/remi-php72.repo
     EOH
     action :run
-    ignore_failure true
   end
 
   package 'install required packages' do 
@@ -118,7 +116,7 @@ when 'debian'
     action :run
   end
 
-  cookbook_file "#{wp_content_dir}/wp-config.php" do
+  cookbook_file "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
     source 'wp-config.php'
     owner 'www-data'
     group 'www-data'
@@ -140,7 +138,7 @@ when 'rhel'
   end
 
   # create wp-config.php file from template
-  cookbook_file "#{wp_content_dir}/wp-config.php" do
+  cookbook_file "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
     source 'wp-config.php'
     owner 'apache'
     group 'apache'
@@ -165,7 +163,7 @@ bash 'populate RDS and EC2 endpoints to wp-config' do
   action :run
 end
 
-file "#{wp_content_dir}/index.html" do
+file "#{ENV['WP_CONTENT_DIR']}/index.html" do
   action :delete
 end
 
@@ -181,7 +179,7 @@ service 'apache2' do
   action :restart
 end
 
-cookbook_file "#{wp_content_dir}/db_setup.sql" do
+cookbook_file "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
   source 'db_setup.sql'
   owner 'root'
   group 'root'
