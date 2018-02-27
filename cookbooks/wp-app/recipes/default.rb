@@ -25,6 +25,7 @@ when 'debian'
 
 #---- RHEL ----
 when 'rhel'
+  # install additional repositories
   node['repository']['files'].each do |pkg,src|
     remote_file "/tmp/#{pkg}" do
       source src
@@ -39,23 +40,21 @@ when 'rhel'
     end
   end
 
-  bash 'enable remi repo' do
+  bash 'enable remi-php72 repo' do
     user 'root'
     code <<-EOH
-    sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/{remi.repo,remi-php72.repo}
+    sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/remi-php72.repo
     EOH
     action :run
     ignore_failure true
   end
 
-  bash 'install required packages' do
-    user 'root'
-    code <<-EOH
-    yum --enablerepo=remi,remi-php72 install -y mysql php php-common php-mysql php-gd php-xml php-mbstring php-mcrypt php-xmlrpc
-    EOH
-    action :run
-    ignore_failure true
-  end
+  package 'install required packages' do 
+   package_name ['mysql', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
+                 'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd'
+                ]
+   action :install
+ end
 
   bash 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
