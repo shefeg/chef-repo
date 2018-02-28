@@ -300,8 +300,8 @@ bash 'import db settings' do
   user 'root'
   code <<-EOH
   RETRIES=0
-  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql && [ $RETRIES -le 7 ]; do \
-  DB import failed, retrying..."; RETRIES=$(( RETRIES+1 )); sleep 5; done
+  while ! mysql -h $RDS_ENDPOINT -u $USER -p$PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql && [ $RETRIES -le 7 ]; do 
+  echo "DB import failed, retrying..."; RETRIES=$(( RETRIES+1 )); sleep 5; done
   EOH
   action :run
 end
@@ -314,7 +314,7 @@ end
 bash 'verify wp login' do
   user 'root'
   code <<-EOH
-  WP_LOGIN=$(curl -v --data "log=$DB_USER&pwd=$DB_PASSWORD&wp-submit=Log+In&testcookie=1" \
+  WP_LOGIN=$(curl -v --data "log=$USER&pwd=$PASSWORD&wp-submit=Log+In&testcookie=1" \
   --cookie 'wordpress_test_cookie=WP+Cookie+check' http://localhost/wp-login.php 2>&1 | cat)
   if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
     echo "LOG IN TO WORDPRESS IS SUCCESSFULL"
