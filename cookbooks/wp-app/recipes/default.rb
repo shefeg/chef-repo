@@ -4,15 +4,6 @@
 #
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
-#***** SET KEY *****  # for testing purposes! don't store key in repository!
-# cookbook_file '/tmp/key' do
-#   source 'key'
-#   owner 'root'
-#   group 'root'
-#   mode '0640'
-#   action :create
-# end
-
 #***** SET ENV VARIABLES *****
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 ENV['RDS_ENDPOINT'] = `cat /tmp/rds_endpoint.txt`.chomp
@@ -21,13 +12,6 @@ credentials = data_bag_item('credentials', 'mysql', Chef::EncryptedDataBagItem.l
 ENV['DB_NAME'] = credentials['db_name']
 ENV['USER'] = credentials['user']
 ENV['PASSWORD'] = credentials['password']
-
-#***** CONFIGURATION BLOCK *****
-# def do_something_useless()
-#   puts "You gave me EC2: #{ENV['RDS_ENDPOINT']} and RDS: #{ENV['EC2_ENDPOINT']} and DB_NAME: #{ENV['DB_NAME']} and USER: #{ENV['USER']} and PASSWORD: #{ENV['PASSWORD']}"
-# end
-
-# do_something_useless()
 
 case node['platform_family']
 #---- DEBIAN ----
@@ -47,68 +31,41 @@ when 'debian'
     action :install
   end
 
-# TODO rework repository add
 #---- RHEL ----
 when 'rhel'
   # set additional repositories for required packages installation
   yum_repository 'epel' do
     description "Extra Packages for Enterprise Linux 7 - $basearch"
     baseurl "http://download.fedoraproject.org/pub/epel/7/$basearch"
-    gpgkey 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7'
     enabled true
-    gpgcheck true
+    gpgcheck false
     action :create
   end
 
   yum_repository 'mysql57-community' do
     description 'MySQL 5.7 Community Server'
     baseurl "http://repo.mysql.com/yum/mysql-5.7-community/el/7/$basearch/"
-    gpgkey 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mysql'
     enabled true
-    gpgcheck true
+    gpgcheck false
     action :create
   end
 
   yum_repository 'remi-safe' do
     description "Safe Remi's RPM repository for Enterprise Linux 7 - $basearch"
     mirrorlist "http://cdn.remirepo.net/enterprise/7/safe/mirror"
-    gpgkey 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-remi'
     enabled true
-    gpgcheck true
+    gpgcheck false
     action :create
   end
 
   yum_repository 'remi-php72' do
     description "Remi's PHP 7.2 RPM repository for Enterprise Linux 7 - $basearch"
     mirrorlist "http://cdn.remirepo.net/enterprise/7/php72/mirror"
-    gpgkey 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-remi'
     enabled true
-    gpgcheck true
+    gpgcheck false
     action :create
   end
   
-  # node['repository']['files'].each do |pkg, src|
-  #   remote_file "/tmp/#{pkg}" do
-  #     source src
-  #     owner 'root'
-  #     group 'root'
-  #     mode '0755'
-  #     action :create_if_missing
-  #   end
-  #   rpm_package pkg do
-  #     source "/tmp/#{pkg}"
-  #     action :install
-  #   end
-  # end
-
-  # bash 'enable remi-php72 repo' do
-  #   user 'root'
-  #   code <<-EOH
-  #   sed -i 's/enabled=.*/enabled=1/' /etc/yum.repos.d/remi-php72.repo
-  #   EOH
-  #   action :run
-  # end
-
   package 'install required packages' do 
     package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
                  'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd'
@@ -191,14 +148,6 @@ when 'debian'
     action :create
   end
 
-  # cookbook_file "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
-  #   source 'wp-config.php'
-  #   owner 'www-data'
-  #   group 'www-data'
-  #   mode '0644'
-  #   action :create
-  # end
-
 #---- RHEL ----
 when 'rhel'
   bash 'copy wp content' do
@@ -226,30 +175,6 @@ when 'rhel'
     action :create
   end
 end
-#   cookbook_file "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
-#     source 'wp-config.php'
-#     owner 'apache'
-#     group 'apache'
-#     mode '0644'
-#     action :create
-#   end
-# end
-
-# bash 'populate RDS and EC2 endpoints to wp-config' do
-#   user 'root'
-#   code <<-EOH
-#   RDS_HOST="$(cat /tmp/rds_endpoint.txt)"
-#   EC2_HOST="$(cat /tmp/ec2_endpoint.txt)"
-#   WP_CONFIG_RDS="define( 'DB_HOST', '$RDS_HOST' );"
-#   WP_CONFIG_HOME="define('WP_HOME','http://$EC2_HOST');"
-#   WP_CONFIG_SITE_URL="define('WP_SITEURL','http://$EC2_HOST');"
-#   sed -i -e "/DB_HOST/c\${WP_CONFIG_RDS}" $WP_CONTENT_DIR/wp-config.php
-#   sed -i -e '/WP_HOME/d' -e '/WP_SITEURL/d' $WP_CONTENT_DIR/wp-config.php
-#   echo "\n${WP_CONFIG_HOME}" >> $WP_CONTENT_DIR/wp-config.php
-#   echo "${WP_CONFIG_SITE_URL}\n" >> $WP_CONTENT_DIR/wp-config.php
-#   EOH
-#   action :run
-# end
 
 file "#{ENV['WP_CONTENT_DIR']}/index.html" do
   action :delete
@@ -267,15 +192,6 @@ service 'apache2' do
   action :restart
 end
 
-# cookbook_file "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
-#   source 'db_setup.sql'
-#   owner 'apache'
-#   group 'root'
-#   mode '0755'
-#   action :create
-#   ignore_failure true
-# end
-
 template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
   source 'db_setup.sql.erb'
   owner 'apache'
@@ -288,14 +204,6 @@ template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
 end
 
 # TODO research kitchen testing locally (create toggle, install local mysql, etc...)
-# Install todo plugin and merge everything to master
-
-  # DB_NAME=$(grep "DB_NAME" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  # DB_USER=$(grep "DB_USER" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  # DB_PASSWORD=$(grep "DB_PASSWORD" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  # DB_HOST=$(grep "DB_HOST" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-  # while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql; do echo "DB import failed, retrying..."; sleep 5; done
-
 bash 'import db settings' do
   user 'root'
   code <<-EOH
@@ -305,11 +213,6 @@ bash 'import db settings' do
   EOH
   action :run
 end
-
-# DB_NAME=$(grep "DB_NAME" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-# DB_USER=$(grep "DB_USER" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-# DB_PASSWORD=$(grep "DB_PASSWORD" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
-# DB_HOST=$(grep "DB_HOST" $WP_CONTENT_DIR/wp-config.php | cut -d',' -f 2 | tr -d "';) ")
 
 bash 'verify wp login' do
   user 'root'
