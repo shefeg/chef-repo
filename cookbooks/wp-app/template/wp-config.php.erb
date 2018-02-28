@@ -19,13 +19,13 @@
  */
 // ** MySQL settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */
-define( 'DB_NAME', 'vasyadb' );
+define( 'DB_NAME', "<%= @DB_NAME %>" );
 /** MySQL database username */
-define( 'DB_USER', 'vasya' );
+define( 'DB_USER', "<%= @USER %>" );
 /** MySQL database password */
-define( 'DB_PASSWORD', 'Vasya1234' );
+define( 'DB_PASSWORD', "<%= @PASSWORD %>" );
 /** MySQL hostname */
-define( 'DB_HOST', 'db-wp.c1grad34jdz1.us-east-1.rds.amazonaws.com' );
+define( 'DB_HOST', "<%= @DB_HOST %>" );
 /** Database Charset to use in creating database tables. */
 define( 'DB_CHARSET', 'utf8' );
 /** The Database Collate type. Don't change this if in doubt. */
