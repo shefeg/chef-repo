@@ -101,11 +101,11 @@ when 'rhel'
   # end
 
   package 'install required packages' do 
-   package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
+    package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
                  'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd'
                 ]
-   action :install
- end
+    action :install
+  end
 
   bash 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
@@ -115,7 +115,7 @@ when 'rhel'
     action :run
     ignore_failure true
   end
- end
+end
 
 service 'apache2' do
   case node['platform_family']
