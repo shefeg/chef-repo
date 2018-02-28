@@ -69,6 +69,15 @@ when 'rhel'
     action :create
   end
 
+  yum_repository 'remi-safe' do
+    description "Safe Remi's RPM repository for Enterprise Linux 7 - $basearch"
+    mirrorlist "http://cdn.remirepo.net/enterprise/7/safe/mirror"
+    gpgkey 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-remi'
+    enabled true
+    gpgcheck true
+    action :create
+  end
+
   yum_repository 'remi-php72' do
     description "Remi's PHP 7.2 RPM repository for Enterprise Linux 7 - $basearch"
     mirrorlist "http://cdn.remirepo.net/enterprise/7/php72/mirror"
