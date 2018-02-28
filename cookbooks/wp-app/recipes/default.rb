@@ -163,8 +163,8 @@ when 'debian'
     tar -xzf /tmp/latest.tar.gz -C /tmp
     rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
     rm -rf /tmp/latest.tar.gz /tmp/wordpress
-    find $WP_CONTENT_DIR -type d -exec chmod 755 {} \;
-    find $WP_CONTENT_DIR -type f -exec chmod 644 {} \;
+    find $WP_CONTENT_DIR -type d -exec chmod 755 - {} \ > /dev/null;
+    find $WP_CONTENT_DIR -type f -exec chmod 644 - {} \ > /dev/null;
     EOH
     action :run
   end
@@ -216,6 +216,7 @@ when 'rhel'
               DB_HOST: ENV['RDS_ENDPOINT'])
     action :create
   end
+end
 #   cookbook_file "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
 #     source 'wp-config.php'
 #     owner 'apache'
