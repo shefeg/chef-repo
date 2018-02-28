@@ -1,0 +1,3 @@
+default['repository']['files']['epel-release-latest-7.noarch.rpm']='https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm'
+default['repository']['files']['mysql57-community-release-el7-9.noarch.rpm']='https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm'
+default['repository']['files']['remi-release-7.rpm']='http://rpms.famillecollet.com/enterprise/remi-release-7.rpm'
