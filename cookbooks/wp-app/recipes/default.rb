@@ -267,14 +267,14 @@ end
 # end
 
 template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
-source 'db_setup.sql.erb'
-owner 'apache'
-group 'apache'
-mode '0644'
-variables(DB_HOST: ENV['RDS_ENDPOINT'],
-          DB_NAME: ENV['DB_NAME'],
-          EC2_ENDPOINT: ENV['EC2_ENDPOINT'])
-action :create
+  source 'db_setup.sql.erb'
+  owner 'apache'
+  group 'apache'
+  mode '0644'
+  variables(DB_HOST: ENV['RDS_ENDPOINT'],
+            DB_NAME: ENV['DB_NAME'],
+            EC2_ENDPOINT: ENV['EC2_ENDPOINT'])
+  action :create
 end
 
 # TODO research kitchen testing locally (create toggle, install local mysql, etc...)
