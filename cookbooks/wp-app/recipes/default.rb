@@ -163,8 +163,8 @@ when 'debian'
     tar -xzf /tmp/latest.tar.gz -C /tmp
     rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
     rm -rf /tmp/latest.tar.gz /tmp/wordpress
-    find $WP_CONTENT_DIR -type d -exec chmod 755 - {} \ > /dev/null;
-    find $WP_CONTENT_DIR -type f -exec chmod 644 - {} \ > /dev/null;
+    find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
+    find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
     EOH
     action :run
   end
