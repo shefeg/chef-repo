@@ -24,6 +24,7 @@ when 'debian'
     action :install
   end
 
+# TO DO rework repository add
 #---- RHEL ----
 when 'rhel'
   # install additional repositories listed in attributes file
@@ -91,9 +92,11 @@ bash 'verify PHP installation' do
   else
     exit 1
   fi
+  rm -rf $WP_CONTENT_DIR/info.php
   EOH
 end
 
+# TO DO change user to apache, change root to tmp dir, remove wp package after install
 remote_file '/root/latest.tar.gz' do
   source 'http://wordpress.org/latest.tar.gz'
   owner 'root'
@@ -102,6 +105,7 @@ remote_file '/root/latest.tar.gz' do
   action :create_if_missing
 end
 
+# TO DO research permissions for WP content
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
@@ -188,6 +192,9 @@ cookbook_file "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
   ignore_failure true
 end
 
+# TO DO change db host address (siteurl, home) in DB table;
+# TO DO research kitchen testing locally (create toggle, install local mysql, etc...)
+# Install todo plugin and merge everything to master
 bash 'import db settings' do
   user 'root'
   code <<-EOH
