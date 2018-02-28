@@ -300,8 +300,8 @@ bash 'import db settings' do
   user 'root'
   code <<-EOH
   RETRIES=0
-  while [ ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql ] && [ "$RETRIES" -le 7 ]; do \
-  echo "DB import failed, retrying..."; RETRIES=$((RETRIES+1)); sleep 5; done
+  while ! mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql && [ $RETRIES -le 7 ]; do \
+  DB import failed, retrying..."; RETRIES=$(( RETRIES+1 )); sleep 5; done
   EOH
   action :run
 end
