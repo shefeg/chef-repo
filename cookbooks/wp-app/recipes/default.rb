@@ -17,7 +17,7 @@
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 ENV['RDS_ENDPOINT'] = `cat /tmp/rds_endpoint.txt`.chomp
 ENV['EC2_ENDPOINT'] = `cat /tmp/ec2_endpoint.txt`.chomp
-credentials = data_bag_item('credentials', 'mysql',  IO.read('/tmp/key'))
+credentials = data_bag_item('credentials', 'mysql', IO.read('/tmp/key'))
 ENV['DB_NAME'] = credentials['db_name']
 ENV['USER'] = credentials['user']
 ENV['PASSWORD'] = credentials['password']
