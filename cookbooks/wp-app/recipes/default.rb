@@ -72,7 +72,7 @@ when 'rhel'
                 ]
     action :install
   end
-
+  
   bash 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
     code <<-EOH
@@ -95,6 +95,7 @@ service 'apache2' do
   action [:enable, :start]
 end
 
+# verify if PHP is installed properly
 bash 'verify PHP installation' do
   user 'root'
   code <<-EOH
@@ -112,6 +113,7 @@ bash 'verify PHP installation' do
   EOH
 end
 
+# download WP package
 remote_file '/tmp/latest.tar.gz' do
   source 'http://wordpress.org/latest.tar.gz'
   owner 'root'
@@ -123,7 +125,8 @@ end
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
-  bash 'copy WP content' do
+  # install WP package and copy content
+  bash 'copy wp content' do
     user 'root'
     code <<-EOH
     tar -xzf /tmp/latest.tar.gz -C /tmp
@@ -135,7 +138,7 @@ when 'debian'
     action :run
   end
 
-  # create wp-config.php file from template
+  # creating wp-config.php file
   template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
     source 'wp-config.php.erb'
     owner 'www-data'
@@ -150,6 +153,7 @@ when 'debian'
 
 #---- RHEL ----
 when 'rhel'
+  # install WP package and copy content
   bash 'copy wp content' do
     user 'root'
     code <<-EOH
@@ -162,7 +166,7 @@ when 'rhel'
     action :run
   end
 
-  # create wp-config.php file from template
+  # creating wp-config.php file
   template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
     source 'wp-config.php.erb'
     owner 'apache'
@@ -192,6 +196,7 @@ service 'apache2' do
   action :restart
 end
 
+# creating mysql dump file for importing into db
 template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
   source 'db_setup.sql.erb'
   owner 'apache'
