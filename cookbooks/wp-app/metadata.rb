@@ -1,6 +1,6 @@
 name 'wp-app'
-maintainer 'The Authors'
-maintainer_email 'you@example.com'
+maintainer 'Alexey'
+maintainer_email 'alexey@example.com'
 license 'All Rights Reserved'
 description 'Installs/Configures wp-app'
 long_description 'Installs/Configures wp-app'
