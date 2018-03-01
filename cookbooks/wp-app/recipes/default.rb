@@ -267,9 +267,9 @@ bash 'import db settings' do
   RETRIES=0
   while ! mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} < ${WP_CONTENT_DIR}/db_setup.sql && [ $RETRIES -le 7 ]; do 
   RETRIES=$(( RETRIES+1 )); echo "DB import failed, retrying... $(( 7-RETRIES )) tries left"; sleep 5; done
-  mysql -u root -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_login='${USER}' WHERE ID=1 LIMIT 1;"
-  mysql -u root -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_pass=MD5('${PASSWORD}') WHERE ID=1 LIMIT 1;"
-  mysql -u root -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_email='${USER}@example.com' WHERE ID=1 LIMIT 1;"
+  mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_login='${USER}' WHERE ID=1 LIMIT 1;"
+  mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_pass=MD5('${PASSWORD}') WHERE ID=1 LIMIT 1;"
+  mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_email='${USER}@example.com' WHERE ID=1 LIMIT 1;"
   EOH
   action :run
 end
