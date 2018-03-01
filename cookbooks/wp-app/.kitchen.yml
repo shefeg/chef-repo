@@ -27,4 +27,9 @@ suites:
     verifier:
       inspec_tests:
         - test/smoke/default
-    attributes:
+    attributes: { 
+      ENV['LOCALMODE']: true
+      ENV['RDS_ENDPOINT']: 'localhost',
+      ENV['EC2_ENDPOINT']: 'localhost',
+
+     }

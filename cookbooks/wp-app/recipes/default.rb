@@ -5,6 +5,7 @@
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
 #***** SET ENV VARIABLES *****
+ENV['LOCALMODE'] = true
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 ENV['RDS_ENDPOINT'] = `cat /tmp/rds_endpoint.txt`.chomp
 ENV['EC2_ENDPOINT'] = `cat /tmp/ec2_endpoint.txt`.chomp
@@ -72,6 +73,12 @@ when 'rhel'
                 ]
     action :install
   end
+
+  # install local mysql server for localtesting
+  package 'mysql-community-server' do 
+    action :install
+    only_if { ENV['LOCALMODE'] == 'true' }
+  end
   
   bash 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
@@ -79,7 +86,6 @@ when 'rhel'
     setenforce 0
     EOH
     action :run
-    ignore_failure true
   end
 end
 
@@ -95,140 +101,155 @@ service 'apache2' do
   action [:enable, :start]
 end
 
-# verify if PHP is installed properly
-bash 'verify PHP installation' do
-  user 'root'
-  code <<-EOH
-  cat <<EOF > $WP_CONTENT_DIR/info.php
-  <?php
-  phpinfo();
-  ?>
-  EOF
-  if [[ $(curl localhost/info.php) = *"PHP Version 7"* ]]; then
-    echo "SUCCESS!"
-  else
-    exit 1
-  fi
-  rm -rf $WP_CONTENT_DIR/info.php
-  EOH
-end
-
-# download WP package
-remote_file '/tmp/latest.tar.gz' do
-  source 'http://wordpress.org/latest.tar.gz'
-  owner 'root'
-  group 'root'
-  mode '0755'
-  action :create_if_missing
-end
-
-case node['platform_family']
-#---- DEBIAN ----
-when 'debian'
-  # install WP package and copy content
-  bash 'copy wp content' do
-    user 'root'
-    code <<-EOH
-    tar -xzf /tmp/latest.tar.gz -C /tmp
-    rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
-    rm -rf /tmp/latest.tar.gz /tmp/wordpress
-    find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
-    find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
-    EOH
-    action :run
-  end
-
-  # creating wp-config.php file
-  template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
-    source 'wp-config.php.erb'
-    owner 'www-data'
-    group 'www-data'
-    mode '0644'
-    variables(DB_NAME: ENV['DB_NAME'],
-              USER: ENV['USER'],
-              PASSWORD: ENV['PASSWORD'],
-              DB_HOST: ENV['RDS_ENDPOINT'])
-    action :create
-  end
-
-#---- RHEL ----
-when 'rhel'
-  # install WP package and copy content
-  bash 'copy wp content' do
-    user 'root'
-    code <<-EOH
-    tar -xzf /tmp/latest.tar.gz -C /tmp
-    rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
-    rm -rf /tmp/latest.tar.gz /tmp/wordpress
-    find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
-    find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
-    EOH
-    action :run
-  end
-
-  # creating wp-config.php file
-  template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
-    source 'wp-config.php.erb'
-    owner 'apache'
-    group 'apache'
-    mode '0644'
-    variables(DB_NAME: ENV['DB_NAME'],
-              USER: ENV['USER'],
-              PASSWORD: ENV['PASSWORD'],
-              DB_HOST: ENV['RDS_ENDPOINT'])
-    action :create
-  end
-end
-
-file "#{ENV['WP_CONTENT_DIR']}/index.html" do
-  action :delete
-end
-
-service 'apache2' do
+# start local mysql server for localtesting
+service 'mysql' do
   case node['platform_family']
   #---- DEBIAN ----
   when 'debian'
-    service_name 'apache2'
+    service_name 'mysql'
   #---- RHEL ----
   when 'rhel'
-    service_name 'httpd'
+    service_name 'mysqld'
   end
-  action :restart
+  action [:enable, :start]
+  only_if { ENV['LOCALMODE'] == 'true' }
 end
 
-# creating mysql dump file for importing into db
-template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
-  source 'db_setup.sql.erb'
-  owner 'apache'
-  group 'apache'
-  mode '0644'
-  variables(DB_HOST: ENV['RDS_ENDPOINT'],
-            DB_NAME: ENV['DB_NAME'],
-            EC2_ENDPOINT: ENV['EC2_ENDPOINT'])
-  action :create
-end
+# # verify if PHP is installed properly
+# bash 'verify PHP installation' do
+#   user 'root'
+#   code <<-EOH
+#   cat <<EOF > $WP_CONTENT_DIR/info.php
+#   <?php
+#   phpinfo();
+#   ?>
+#   EOF
+#   if [[ $(curl localhost/info.php) = *"PHP Version 7"* ]]; then
+#     echo "SUCCESS!"
+#   else
+#     exit 1
+#   fi
+#   rm -rf $WP_CONTENT_DIR/info.php
+#   EOH
+# end
 
-# TODO research kitchen testing locally (create toggle, install local mysql, etc...)
-bash 'import db settings' do
-  user 'root'
-  code <<-EOH
-  RETRIES=0
-  while ! mysql -h $RDS_ENDPOINT -u $USER -p$PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql && [ $RETRIES -le 7 ]; do 
-  echo "DB import failed, retrying..."; RETRIES=$(( RETRIES+1 )); sleep 5; done
-  EOH
-  action :run
-end
+# # download WP package
+# remote_file '/tmp/latest.tar.gz' do
+#   source 'http://wordpress.org/latest.tar.gz'
+#   owner 'root'
+#   group 'root'
+#   mode '0755'
+#   action :create_if_missing
+# end
 
-bash 'verify wp login' do
-  user 'root'
-  code <<-EOH
-  WP_LOGIN=$(curl -v --data "log=$USER&pwd=$PASSWORD&wp-submit=Log+In&testcookie=1" \
-  --cookie 'wordpress_test_cookie=WP+Cookie+check' http://$EC2_ENDPOINT/wp-login.php 2>&1 | cat)
-  if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
-    echo "LOG IN TO WORDPRESS IS SUCCESSFULL"
-  else
-    exit 1
-  fi
-  EOH
-  action :run
-end
+# case node['platform_family']
+# #---- DEBIAN ----
+# when 'debian'
+#   # install WP package and copy content
+#   bash 'copy wp content' do
+#     user 'root'
+#     code <<-EOH
+#     tar -xzf /tmp/latest.tar.gz -C /tmp
+#     rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
+#     rm -rf /tmp/latest.tar.gz /tmp/wordpress
+#     find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
+#     find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
+#     EOH
+#     action :run
+#   end
+
+#   # creating wp-config.php file
+#   template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
+#     source 'wp-config.php.erb'
+#     owner 'www-data'
+#     group 'www-data'
+#     mode '0644'
+#     variables(DB_NAME: ENV['DB_NAME'],
+#               USER: ENV['USER'],
+#               PASSWORD: ENV['PASSWORD'],
+#               DB_HOST: ENV['RDS_ENDPOINT'])
+#     action :create
+#   end
+
+# #---- RHEL ----
+# when 'rhel'
+#   # install WP package and copy content
+#   bash 'copy wp content' do
+#     user 'root'
+#     code <<-EOH
+#     tar -xzf /tmp/latest.tar.gz -C /tmp
+#     rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
+#     rm -rf /tmp/latest.tar.gz /tmp/wordpress
+#     find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
+#     find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
+#     EOH
+#     action :run
+#   end
+
+#   # creating wp-config.php file
+#   template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
+#     source 'wp-config.php.erb'
+#     owner 'apache'
+#     group 'apache'
+#     mode '0644'
+#     variables(DB_NAME: ENV['DB_NAME'],
+#               USER: ENV['USER'],
+#               PASSWORD: ENV['PASSWORD'],
+#               DB_HOST: ENV['RDS_ENDPOINT'])
+#     action :create
+#   end
+# end
+
+# file "#{ENV['WP_CONTENT_DIR']}/index.html" do
+#   action :delete
+# end
+
+# service 'apache2' do
+#   case node['platform_family']
+#   #---- DEBIAN ----
+#   when 'debian'
+#     service_name 'apache2'
+#   #---- RHEL ----
+#   when 'rhel'
+#     service_name 'httpd'
+#   end
+#   action :restart
+# end
+
+# # creating mysql dump file for importing into db
+# template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
+#   source 'db_setup.sql.erb'
+#   owner 'apache'
+#   group 'apache'
+#   mode '0644'
+#   variables(DB_HOST: ENV['RDS_ENDPOINT'],
+#             DB_NAME: ENV['DB_NAME'],
+#             EC2_ENDPOINT: ENV['EC2_ENDPOINT'])
+#   action :create
+# end
+
+# # TODO research kitchen testing locally (create toggle, install local mysql, etc...)
+# bash 'import db settings' do
+#   user 'root'
+#   code <<-EOH
+#   RETRIES=0
+#   while ! mysql -h $RDS_ENDPOINT -u $USER -p$PASSWORD $DB_NAME < $WP_CONTENT_DIR/db_setup.sql && [ $RETRIES -le 7 ]; do 
+#   RETRIES=$(( RETRIES+1 )); echo "DB import failed, retrying... $(( 7-RETRIES )) tries left"; sleep 5; done
+#   [ $RETRIES -eq 7 ] && exit 1
+#   EOH
+#   action :run
+# end
+
+# bash 'verify wp login' do
+#   user 'root'
+#   code <<-EOH
+#   WP_LOGIN=$(curl -v --data "log=$USER&pwd=$PASSWORD&wp-submit=Log+In&testcookie=1" \
+#   --cookie 'wordpress_test_cookie=WP+Cookie+check' http://$EC2_ENDPOINT/wp-login.php 2>&1 | cat)
+#   if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
+#     echo "LOG IN TO WORDPRESS IS SUCCESSFULL"
+#   else
+#     exit 1
+#   fi
+#   EOH
+#   action :run
+# end
