@@ -261,7 +261,6 @@ template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
   action :create
 end
 
-# TODO research kitchen testing locally (create toggle, install local mysql, etc...)
 bash 'import db settings' do
   user 'root'
   code <<-EOH
