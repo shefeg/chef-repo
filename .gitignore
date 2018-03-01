@@ -123,3 +123,4 @@ nodes
 # ## Office Temp Files
 # ~$*
 .kitchen/logs/kitchen.log
+cookbooks/wp-app/key
