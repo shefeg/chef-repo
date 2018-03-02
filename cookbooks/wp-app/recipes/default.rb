@@ -280,19 +280,19 @@ bash 'import db settings' do
   action :nothing
   retries 6
   retry_delay 5
-  notifies :run, 'bash[verify wp login]', :immediately
+  # notifies :run, 'bash[verify wp login]', :immediately
 end
 
-bash 'verify wp login' do
-  user 'root'
-  code <<-EOH
-  WP_LOGIN=$(curl -v --data "log=${USER}&pwd=${PASSWORD}&wp-submit=Log+In&testcookie=1" \
-  --cookie 'wordpress_test_cookie=WP+Cookie+check' http://$EC2_ENDPOINT/wp-login.php 2>&1 | cat)
-  if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
-    echo "LOG IN TO WORDPRESS IS SUCCESSFULL"
-  else
-    exit 1
-  fi
-  EOH
-  action :nothing
-end
+# bash 'verify wp login' do
+#   user 'root'
+#   code <<-EOH
+#   WP_LOGIN=$(curl -v --data "log=${USER}&pwd=${PASSWORD}&wp-submit=Log+In&testcookie=1" \
+#   --cookie 'wordpress_test_cookie=WP+Cookie+check' http://$EC2_ENDPOINT/wp-login.php 2>&1 | cat)
+#   if [[ "$WP_LOGIN" = *"wordpress_logged_in"* ]]; then
+#     echo "LOG IN TO WORDPRESS IS SUCCESSFULL"
+#   else
+#     exit 1
+#   fi
+#   EOH
+#   action :nothing
+# end
