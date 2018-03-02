@@ -7,13 +7,15 @@
 #***** SET ENV VARIABLES *****
 
 # 'localmode' attribute is 'false' by default. it's value should be 'true' in kitchen.yml for local kitchen testing
+node.normal['localmode'] = 'true'
 
 if node['localmode'] == 'true'
   ENV['RDS_ENDPOINT'] = 'localhost'
   ENV['EC2_ENDPOINT'] = 'localhost'
-  ENV['DB_NAME'] = 'wordpress'
-  ENV['USER'] = 'wordpressuser'
-  ENV['PASSWORD'] = 'Drowssap1!'
+  credentials = data_bag_item('credentials', 'mysql_local')
+  ENV['DB_NAME'] = credentials['db_name']
+  ENV['USER'] = credentials['user']
+  ENV['PASSWORD'] = credentials['password']
 else
   ENV['RDS_ENDPOINT'] = `cat /tmp/rds_endpoint.txt`.chomp
   ENV['EC2_ENDPOINT'] = `cat /tmp/ec2_endpoint.txt`.chomp
@@ -85,10 +87,11 @@ when 'rhel'
   end
   
   package 'install required packages' do 
-    package_name ['mysql-community-client', 'php', 'php-common', 'php-mysql', 'php-gd', 'php-xml', 'php-mbstring',
-                 'php-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
+    package_name ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml', 'php-mbstring',
+                 'php-pecl-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
                 ]
     action :install
+    notifies :run, 'bash[verify PHP installation]', :immediately
   end
 
   # install local mysql server for localtesting
@@ -103,6 +106,7 @@ when 'rhel'
     setenforce 0
     EOH
     action :run
+    not_if { `sestatus | sed -n -e 's/^Current mode: *//p'`.chomp == 'permissive'}
   end
 end
 
@@ -164,6 +168,7 @@ bash 'verify PHP installation' do
   fi
   rm -rf $WP_CONTENT_DIR/info.php
   EOH
+  action :nothing
 end
 
 # download WP package
@@ -172,9 +177,12 @@ remote_file '/tmp/latest.tar.gz' do
   owner 'root'
   group 'root'
   mode '0755'
-  action :create_if_missing
+  action :create
+  not_if { ::File.exist?("#{ENV['WP_CONTENT_DIR']}/wp-config.php") }
+  notifies :run, 'bash[copy wp content]', :immediately
 end
 
+# code block to untar wp package and copy content to $WP_CONTENT_DIR
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
@@ -188,7 +196,7 @@ when 'debian'
     find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
     find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
     EOH
-    action :run
+    action :nothing
   end
 
   # creating wp-config.php file
@@ -212,11 +220,10 @@ when 'rhel'
     code <<-EOH
     tar -xzf /tmp/latest.tar.gz -C /tmp
     rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
-    
     find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
     find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
     EOH
-    action :run
+    action :nothing
   end
 
   # creating wp-config.php file
@@ -246,7 +253,7 @@ service 'apache2' do
   when 'rhel'
     service_name 'httpd'
   end
-  action :restart
+  action :nothing
 end
 
 # creating mysql dump file for importing into db
@@ -254,24 +261,26 @@ template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
   source 'db_setup.sql.erb'
   owner 'root'
   group 'root'
-  mode '0644'
+  mode '0640'
   variables(DB_HOST: ENV['RDS_ENDPOINT'],
             DB_NAME: ENV['DB_NAME'],
             EC2_ENDPOINT: ENV['EC2_ENDPOINT'])
   action :create
+  notifies :run, 'bash[import db settings]', :immediately
 end
 
 bash 'import db settings' do
   user 'root'
   code <<-EOH
-  RETRIES=0
-  while ! mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} < ${WP_CONTENT_DIR}/db_setup.sql && [ $RETRIES -le 7 ]; do 
-  RETRIES=$(( RETRIES+1 )); echo "DB import failed, retrying... $(( 7-RETRIES )) tries left"; sleep 5; done
+  mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} < ${WP_CONTENT_DIR}/db_setup.sql
   mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_login='${USER}' WHERE ID=1 LIMIT 1;"
   mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_pass=MD5('${PASSWORD}') WHERE ID=1 LIMIT 1;"
   mysql -h ${RDS_ENDPOINT} -u ${USER} -p${PASSWORD} ${DB_NAME} -e "UPDATE wp_users SET user_email='${USER}@example.com' WHERE ID=1 LIMIT 1;"
   EOH
-  action :run
+  action :nothing
+  retries 6
+  retry_delay 5
+  notifies :run, 'bash[verify wp login]', :immediately
 end
 
 bash 'verify wp login' do
@@ -285,5 +294,5 @@ bash 'verify wp login' do
     exit 1
   fi
   EOH
-  action :run
+  action :nothing
 end
