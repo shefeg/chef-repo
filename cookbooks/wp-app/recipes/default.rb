@@ -5,7 +5,6 @@
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
 #***** SET ENV VARIABLES *****
-
 # 'localmode' attribute is 'false' by default. it's value should be 'true' in kitchen.yml for local kitchen testing
 node.normal['localmode'] = 'true'
 
@@ -25,9 +24,22 @@ else
   ENV['PASSWORD'] = credentials['password']
 end
 
+case node['platform_family']
+when 'debian'
+  package_list = ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli', 
+                  'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'rsync'
+                 ]
+  ENV['APACHE_USER'] = 'www-data'
+when 'rhel'
+  package_list = ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml', 
+                  'php-mbstring', 'php-pecl-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
+                 ]
+  ENV['APACHE_USER'] = 'apache'
+end
+
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 
-# code block for installing required packages
+# set additional repositories for required packages installation
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
@@ -39,22 +51,8 @@ when 'debian'
 
   apt_update 'update'
 
-  package 'required packages' do
-    package_name ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli',
-                  'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'rsync'
-                 ]
-    action :install
-  end
-
-  # install local mysql server for localtesting
-  package 'mysql-server' do 
-    action :install
-    only_if { node['localmode'] == 'true' }
-  end
-
 #---- RHEL ----
 when 'rhel'
-  # set additional repositories for required packages installation
   yum_repository 'epel' do
     description "Extra Packages for Enterprise Linux 7 - $basearch"
     baseurl "http://download.fedoraproject.org/pub/epel/7/$basearch"
@@ -87,20 +85,6 @@ when 'rhel'
     action :create
   end
   
-  package 'install required packages' do 
-    package_name ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml', 'php-mbstring',
-                 'php-pecl-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
-                ]
-    action :install
-    notifies :run, 'bash[verify PHP installation]', :immediately
-  end
-
-  # install local mysql server for localtesting
-  package 'mysql-community-server' do 
-    action :install
-    only_if { node['localmode'] == 'true' }
-  end
-  
   bash 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
     code <<-EOH
@@ -111,44 +95,26 @@ when 'rhel'
   end
 end
 
-service 'apache2' do
-  case node['platform_family']
-  #---- DEBIAN ----
-  when 'debian'
-    service_name 'apache2'
-  #---- RHEL ----
-  when 'rhel'
-    service_name 'httpd'
-  end
-  action [:enable, :start]
+package 'install required packages' do
+  package_name package_list
+  action :install
+  notifies [:enable, :start], 'service[apache]', :immediately
+  notifies :run, 'bash[verify PHP installation]', :immediately
 end
 
-service 'mysql-server' do
+# install local mysql server for localtesting
+package 'mysql-server' do 
   case node['platform_family']
-  #---- DEBIAN ----
-  when 'debian'
-    service_name 'mysql'
-  #---- RHEL ----
-  when 'rhel'
-    service_name 'mysqld'
-  end
-  action [:enable, :start]
+    #---- DEBIAN ----
+    when 'debian'
+      package_name 'mysql-server'
+    #---- RHEL ----
+    when 'rhel'
+      package_name 'mysql-community-server'
+    end
+  action :nothing
   only_if { node['localmode'] == 'true' }
-end
-
-bash 'create local mysql user and db' do
-  user 'root'
-  code <<-EOH
-  ROOTPASSWD="$(sed -n -e 's/^.*temporary password.*: //p' /var/log/mysqld.log)"
-  mysql -u root -p${ROOTPASSWD} --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${PASSWORD}';" || true
-  mysql -u root -p${PASSWORD} -e "CREATE DATABASE ${DB_NAME} /*\!40100 DEFAULT CHARACTER SET utf8 */;" || true
-  mysql -u root -p${PASSWORD} -e "CREATE USER '${USER}' IDENTIFIED BY '${PASSWORD}';" || \
-  mysql -u root -p${PASSWORD} -e "SET PASSWORD FOR '${USER}'='${PASSWORD}';"
-  mysql -u root -p${PASSWORD} -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${USER}';"
-  mysql -u root -p${PASSWORD} -e "FLUSH PRIVILEGES;"
-  EOH
-  action :run
-  only_if { node['localmode'] == 'true' }
+  notifies [:enable, :start], 'service[mysql-server]', :immediately
 end
 
 # verify if PHP is installed properly
@@ -170,6 +136,46 @@ bash 'verify PHP installation' do
   action :nothing
 end
 
+service 'apache' do
+  case node['platform_family']
+  #---- DEBIAN ----
+  when 'debian'
+    service_name 'apache2'
+  #---- RHEL ----
+  when 'rhel'
+    service_name 'httpd'
+  end
+  action :nothing
+end
+
+service 'mysql-server' do
+  case node['platform_family']
+  #---- DEBIAN ----
+  when 'debian'
+    service_name 'mysql'
+  #---- RHEL ----
+  when 'rhel'
+    service_name 'mysqld'
+  end
+  action :nothing
+  only_if { node['localmode'] == 'true' }
+end
+
+bash 'create local mysql user and db' do
+  user 'root'
+  code <<-EOH
+  ROOTPASSWD="$(sed -n -e 's/^.*temporary password.*: //p' /var/log/mysqld.log)"
+  mysql -u root -p${ROOTPASSWD} --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${PASSWORD}';" || true
+  mysql -u root -p${PASSWORD} -e "CREATE DATABASE ${DB_NAME} /*\!40100 DEFAULT CHARACTER SET utf8 */;" || true
+  mysql -u root -p${PASSWORD} -e "CREATE USER '${USER}' IDENTIFIED BY '${PASSWORD}';" || \
+  mysql -u root -p${PASSWORD} -e "SET PASSWORD FOR '${USER}'='${PASSWORD}';"
+  mysql -u root -p${PASSWORD} -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${USER}';"
+  mysql -u root -p${PASSWORD} -e "FLUSH PRIVILEGES;"
+  EOH
+  action :run
+  only_if { node['localmode'] == 'true' }
+end
+
 # download WP package
 remote_file '/tmp/latest.tar.gz' do
   source 'http://wordpress.org/latest.tar.gz'
@@ -177,73 +183,42 @@ remote_file '/tmp/latest.tar.gz' do
   group 'root'
   mode '0755'
   action :create
-  not_if { ::File.exist?("#{ENV['WP_CONTENT_DIR']}/wp-config.php") }
-  notifies :run, 'bash[copy wp content]', :immediately
+  not_if { ::File.exists?("#{ENV['WP_CONTENT_DIR']}/wp-config.php") }
 end
 
-# code block to untar wp package and copy content to $WP_CONTENT_DIR
-case node['platform_family']
-#---- DEBIAN ----
-when 'debian'
-  # install WP package and copy content
-  bash 'copy wp content' do
-    user 'root'
-    code <<-EOH
-    tar -xzf /tmp/latest.tar.gz -C /tmp
-    rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
-    rm -rf /tmp/latest.tar.gz /tmp/wordpress
-    find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
-    find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
-    EOH
-    action :nothing
-  end
+# install WP package and copy content
+bash 'copy wp content' do
+  user 'root'
+  code <<-EOH
+  tar -xzf /tmp/latest.tar.gz -C /tmp
+  rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
+  rm -rf /tmp/latest.tar.gz /tmp/wordpress
+  chown -R ${APACHE_USER}:${APACHE_USER} $WP_CONTENT_DIR
+  find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
+  find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
+  EOH
+  action :nothing
+end
 
-  # creating wp-config.php file
-  template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
-    source 'wp-config.php.erb'
-    owner 'www-data'
-    group 'www-data'
-    mode '0644'
-    variables(DB_NAME: ENV['DB_NAME'],
-              USER: ENV['USER'],
-              PASSWORD: ENV['PASSWORD'],
-              DB_HOST: ENV['RDS_ENDPOINT'])
-    action :create
-  end
-
-#---- RHEL ----
-when 'rhel'
-  # install WP package and copy content
-  bash 'copy wp content' do
-    user 'root'
-    code <<-EOH
-    tar -xzf /tmp/latest.tar.gz -C /tmp
-    rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
-    find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
-    find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
-    EOH
-    action :nothing
-  end
-
-  # creating wp-config.php file
-  template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
-    source 'wp-config.php.erb'
-    owner 'apache'
-    group 'apache'
-    mode '0644'
-    variables(DB_NAME: ENV['DB_NAME'],
-              USER: ENV['USER'],
-              PASSWORD: ENV['PASSWORD'],
-              DB_HOST: ENV['RDS_ENDPOINT'])
-    action :create
-  end
+# creating wp-config.php file
+template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
+  source 'wp-config.php.erb'
+  owner "#{ENV['APACHE_USER']}"
+  group "#{ENV['APACHE_USER']}"
+  mode '0644'
+  variables(DB_NAME: ENV['DB_NAME'],
+            USER: ENV['USER'],
+            PASSWORD: ENV['PASSWORD'],
+            DB_HOST: ENV['RDS_ENDPOINT'])
+  action :create
+  notifies :run, 'bash[copy wp content]', :before
 end
 
 file "#{ENV['WP_CONTENT_DIR']}/index.html" do
   action :delete
 end
 
-service 'apache2' do
+service 'apache' do
   case node['platform_family']
   #---- DEBIAN ----
   when 'debian'
