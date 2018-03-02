@@ -26,15 +26,25 @@ end
 
 case node['platform_family']
 when 'debian'
+
   package_list = ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli', 
                   'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'rsync'
                  ]
+  mysql_package = 'mysql-server'
+  mysql_service = 'mysql'
+  apache_service = 'apache2'
   ENV['APACHE_USER'] = 'www-data'
+
 when 'rhel'
+
   package_list = ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml', 
                   'php-mbstring', 'php-pecl-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
                  ]
+  mysql_package = 'mysql-community-server'
+  mysql_service = 'mysqld'
+  apache_service = 'httpd'
   ENV['APACHE_USER'] = 'apache'
+
 end
 
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
@@ -95,7 +105,7 @@ when 'rhel'
   end
 end
 
-package 'install required packages' do
+package 'required packages' do
   package_name package_list
   action :install
   notifies [:enable, :start], 'service[apache]', :immediately
@@ -103,18 +113,11 @@ package 'install required packages' do
 end
 
 # install local mysql server for localtesting
-package 'mysql-server' do 
-  case node['platform_family']
-    #---- DEBIAN ----
-    when 'debian'
-      package_name 'mysql-server'
-    #---- RHEL ----
-    when 'rhel'
-      package_name 'mysql-community-server'
-    end
+package 'mysql' do 
+  package_name mysql_package
   action :nothing
   only_if { node['localmode'] == 'true' }
-  notifies [:enable, :start], 'service[mysql-server]', :immediately
+  notifies [:enable, :start], 'service[mysql]', :immediately
 end
 
 # verify if PHP is installed properly
@@ -137,26 +140,12 @@ bash 'verify PHP installation' do
 end
 
 service 'apache' do
-  case node['platform_family']
-  #---- DEBIAN ----
-  when 'debian'
-    service_name 'apache2'
-  #---- RHEL ----
-  when 'rhel'
-    service_name 'httpd'
-  end
+  service_name apache_service
   action :nothing
 end
 
-service 'mysql-server' do
-  case node['platform_family']
-  #---- DEBIAN ----
-  when 'debian'
-    service_name 'mysql'
-  #---- RHEL ----
-  when 'rhel'
-    service_name 'mysqld'
-  end
+service 'mysql' do
+  service_name mysql_service
   action :nothing
   only_if { node['localmode'] == 'true' }
 end
@@ -218,15 +207,7 @@ file "#{ENV['WP_CONTENT_DIR']}/index.html" do
   action :delete
 end
 
-service 'apache' do
-  case node['platform_family']
-  #---- DEBIAN ----
-  when 'debian'
-    service_name 'apache2'
-  #---- RHEL ----
-  when 'rhel'
-    service_name 'httpd'
-  end
+service apache_service do
   action :nothing
 end
 
