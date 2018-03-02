@@ -27,6 +27,7 @@ end
 
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 
+# code block for installing required packages
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
@@ -122,7 +123,6 @@ service 'apache2' do
   action [:enable, :start]
 end
 
-# start local mysql server for localtesting
 service 'mysql-server' do
   case node['platform_family']
   #---- DEBIAN ----
@@ -136,8 +136,7 @@ service 'mysql-server' do
   only_if { node['localmode'] == 'true' }
 end
 
-# create mysql user and db for local testing
-bash 'create mysql user and db' do
+bash 'create local mysql user and db' do
   user 'root'
   code <<-EOH
   ROOTPASSWD="$(sed -n -e 's/^.*temporary password.*: //p' /var/log/mysqld.log)"
