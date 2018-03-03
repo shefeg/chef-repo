@@ -49,7 +49,14 @@ end
 
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 
-# set additional repositories for required packages installation
+# def function()
+#   `find $WP_CONTENT_DIR -type d`.split("\n").each do |x|
+#     puts x
+#   end
+# end
+# function()
+
+# set additional repositories for required packages installation and set selinux to permissive
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
@@ -168,8 +175,8 @@ end
 # download WP package
 remote_file '/tmp/latest.tar.gz' do
   source 'http://wordpress.org/latest.tar.gz'
-  owner 'root'
-  group 'root'
+  owner ENV['APACHE_USER']
+  group ENV['APACHE_USER']
   mode '0755'
   action :create
   not_if { ::File.exists?("#{ENV['WP_CONTENT_DIR']}/wp-config.php") }
@@ -182,9 +189,6 @@ bash 'copy wp content' do
   tar -xzf /tmp/latest.tar.gz -C /tmp
   rsync -av /tmp/wordpress/* $WP_CONTENT_DIR/
   rm -rf /tmp/latest.tar.gz /tmp/wordpress
-  chown -R ${APACHE_USER}:${APACHE_USER} $WP_CONTENT_DIR
-  find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
-  find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
   EOH
   action :nothing
 end
@@ -192,8 +196,8 @@ end
 # creating wp-config.php file
 template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
   source 'wp-config.php.erb'
-  owner "#{ENV['APACHE_USER']}"
-  group "#{ENV['APACHE_USER']}"
+  owner ENV['APACHE_USER']
+  group ENV['APACHE_USER']
   mode '0644'
   variables(DB_NAME: ENV['DB_NAME'],
             USER: ENV['USER'],
@@ -207,6 +211,16 @@ file "#{ENV['WP_CONTENT_DIR']}/index.html" do
   action :delete
 end
 
+bash 'set permissions to wp directories and files' do
+  user 'root'
+  code <<-EOH
+  chown -R ${APACHE_USER}:${APACHE_USER} $WP_CONTENT_DIR
+  find $WP_CONTENT_DIR -type d -exec chmod 755 {} \; > /dev/null
+  find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
+  EOH
+  action :run
+end
+
 service apache_service do
   action :nothing
 end
@@ -214,9 +228,9 @@ end
 # creating mysql dump file for importing into db
 template "#{ENV['WP_CONTENT_DIR']}/db_setup.sql" do
   source 'db_setup.sql.erb'
-  owner 'root'
-  group 'root'
-  mode '0640'
+  owner ENV['APACHE_USER']
+  group ENV['APACHE_USER']
+  mode '0644'
   variables(DB_HOST: ENV['RDS_ENDPOINT'],
             DB_NAME: ENV['DB_NAME'],
             EC2_ENDPOINT: ENV['EC2_ENDPOINT'])
