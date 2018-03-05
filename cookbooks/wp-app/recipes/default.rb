@@ -49,13 +49,6 @@ end
 
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 
-# def function()
-#   `find $WP_CONTENT_DIR -type d`.split("\n").each do |x|
-#     puts x
-#   end
-# end
-# function()
-
 # set additional repositories for required packages installation and set selinux to permissive
 case node['platform_family']
 #---- DEBIAN ----
