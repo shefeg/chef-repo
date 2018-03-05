@@ -32,7 +32,7 @@ when 'debian'
                  ]
   mysql_package = 'mysql-server'
   mysql_service = 'mysql'
-  ENV['APACHE_SERVICE'] = 'apache2'
+  apache_service = 'apache2'
   ENV['APACHE_USER'] = 'www-data'
 
 when 'rhel'
@@ -42,7 +42,7 @@ when 'rhel'
                  ]
   mysql_package = 'mysql-community-server'
   mysql_service = 'mysqld'
-  ENV['APACHE_SERVICE'] = 'httpd'
+  apache_service = 'httpd'
   ENV['APACHE_USER'] = 'apache'
 
 end
@@ -60,7 +60,7 @@ when 'debian'
   end
 
   apt_update 'update'
-
+  
 #---- RHEL ----
 when 'rhel'
   yum_repository 'epel' do
@@ -106,16 +106,14 @@ end
 package 'required packages' do
   package_name package_list
   action :install
-  notifies [:enable, :start], 'service[apache]', :immediately
   notifies :run, 'bash[verify PHP installation]', :immediately
 end
 
 # install local mysql server for localtesting
 package 'mysql' do 
   package_name mysql_package
-  action :nothing
+  action :install
   only_if { node['localmode'] == 'true' }
-  notifies [:enable, :start], 'service[mysql]', :immediately
 end
 
 # verify if PHP is installed properly
@@ -140,19 +138,20 @@ end
 # in situations when we change apache configs
 execute 'run apache configtest' do
   user 'root'
-  command "$APACHE_SERVICE -t"
+  command 'apachectl configtest'
   action :nothing
+  subscribes :run, 'bash[copy wp content]', :immediately
 end
 
 # this block is for cases when we need to reload apache
 service 'apache' do
-  service_name ENV['APACHE_SERVICE']
-  action :nothing
+  service_name apache_service
+  action [:enable, :start]
 end
 
 service 'mysql' do
   service_name mysql_service
-  action :nothing
+  action [:enable, :start]
   only_if { node['localmode'] == 'true' }
 end
 
