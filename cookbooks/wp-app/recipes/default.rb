@@ -95,11 +95,9 @@ when 'rhel'
     action :create
   end
   
-  bash 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
+  execute 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
-    code <<-EOH
-    setenforce 0
-    EOH
+    command 'setenforce 0'
     action :run
     not_if { `sestatus | sed -n -e 's/^Current mode: *//p'`.chomp == 'permissive'}
   end
@@ -139,6 +137,14 @@ bash 'verify PHP installation' do
   action :nothing
 end
 
+# in situations when we change apache configs
+execute 'run apache configtest' do
+  user 'root'
+  command 'apachectl configtest'
+  action :nothing
+end
+
+# this block is for cases when we need to reload apache
 service 'apache' do
   service_name apache_service
   action :nothing
