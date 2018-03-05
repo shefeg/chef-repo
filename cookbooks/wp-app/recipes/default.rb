@@ -272,5 +272,5 @@ end
 #     exit 1
 #   fi
 #   EOH
-#   action :nothing
+#   action :run
 # end

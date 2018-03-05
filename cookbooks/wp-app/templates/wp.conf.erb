@@ -8,10 +8,12 @@
           AllowOverride None
   </Directory>
   <Directory <%= @DOCUMENTROOT %> >
-        AllowOverride All
+          Options Indexes FollowSymLinks MultiViews
+          AllowOverride All
+          Require all granted
   </Directory>
 
-  LogLevel warn
+  LogLevel debug
 
   ServerSignature Off
 
