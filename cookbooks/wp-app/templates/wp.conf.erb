@@ -1,0 +1,21 @@
+<VirtualHost *:80>
+  ServerName <%= @SERVERNAME %>
+  ServerAdmin 'vasya@example.com'
+
+  DocumentRoot <%= @DOCUMENTROOT %>
+  <Directory "/">
+          Options FollowSymLinks
+          AllowOverride None
+  </Directory>
+  <Directory <%= @DOCUMENTROOT %> >
+        AllowOverride All
+  </Directory>
+
+  LogLevel warn
+
+  ServerSignature Off
+
+  AddType application/x-httpd-php .php
+  AddType application/x-httpd-php-source .phps
+  DirectoryIndex index.php index.html
+</VirtualHost>

@@ -26,7 +26,6 @@ end
 
 case node['platform_family']
 when 'debian'
-
   package_list = ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli',
                   'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'rsync'
                  ]
@@ -34,9 +33,8 @@ when 'debian'
   mysql_service = 'mysql'
   apache_service = 'apache2'
   ENV['APACHE_USER'] = 'www-data'
-
+  apache_config_dir = '/etc/apache2/sites-enabled'
 when 'rhel'
-
   package_list = ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml',
                   'php-mbstring', 'php-pecl-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
                  ]
@@ -44,7 +42,7 @@ when 'rhel'
   mysql_service = 'mysqld'
   apache_service = 'httpd'
   ENV['APACHE_USER'] = 'apache'
-
+  apache_config_dir = '/etc/httpd/conf.d'
 end
 
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
@@ -116,6 +114,11 @@ package 'mysql' do
   only_if { node['localmode'] == 'true' }
 end
 
+directory ENV['WP_CONTENT_DIR'] do
+  recursive true
+  action :create
+end
+
 # verify if PHP is installed properly
 bash 'verify PHP installation' do
   user 'root'
@@ -133,6 +136,18 @@ bash 'verify PHP installation' do
   rm -rf $WP_CONTENT_DIR/info.php
   EOH
   action :nothing
+end
+
+template "#{apache_config_dir}/wp.conf" do
+  source 'wp.conf.erb'
+  owner 'root'
+  group 'root'
+  mode '0644'
+  variables(SERVERNAME: ENV['EC2_ENDPOINT'],
+            DOCUMENTROOT: ENV['WP_CONTENT_DIR'])
+  action :create
+  notifies :run, 'execute[run apache configtest]', :immediately
+  notifies :reload, 'service[apache]', :immediately
 end
 
 # in situations when we change apache configs
