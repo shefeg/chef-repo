@@ -4,7 +4,7 @@
 #
 # Copyright:: 2018, The Authors, All Rights Reserved.
 
-#***** SET ENV VARIABLES *****
+# ***** SET ENV VARIABLES *****
 # 'localmode' attribute is 'false' by default. it's value should be 'true' in kitchen.yml for local kitchen testing
 node.normal['localmode'] = 'true'
 
@@ -27,7 +27,7 @@ end
 case node['platform_family']
 when 'debian'
 
-  package_list = ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli', 
+  package_list = ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli',
                   'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'rsync'
                  ]
   mysql_package = 'mysql-server'
@@ -37,7 +37,7 @@ when 'debian'
 
 when 'rhel'
 
-  package_list = ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml', 
+  package_list = ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml',
                   'php-mbstring', 'php-pecl-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
                  ]
   mysql_package = 'mysql-community-server'
@@ -60,11 +60,11 @@ when 'debian'
   end
 
   apt_update 'update'
-  
+
 #---- RHEL ----
 when 'rhel'
   yum_repository 'epel' do
-    description "Extra Packages for Enterprise Linux 7 - $basearch"
+    description 'Extra Packages for Enterprise Linux 7 - $basearch'
     baseurl "http://download.fedoraproject.org/pub/epel/7/$basearch"
     enabled true
     gpgcheck false
@@ -81,7 +81,7 @@ when 'rhel'
 
   yum_repository 'remi-safe' do
     description "Safe Remi's RPM repository for Enterprise Linux 7 - $basearch"
-    mirrorlist "http://cdn.remirepo.net/enterprise/7/safe/mirror"
+    mirrorlist 'http://cdn.remirepo.net/enterprise/7/safe/mirror'
     enabled true
     gpgcheck false
     action :create
@@ -89,17 +89,17 @@ when 'rhel'
 
   yum_repository 'remi-php72' do
     description "Remi's PHP 7.2 RPM repository for Enterprise Linux 7 - $basearch"
-    mirrorlist "http://cdn.remirepo.net/enterprise/7/php72/mirror"
+    mirrorlist 'http://cdn.remirepo.net/enterprise/7/php72/mirror'
     enabled true
     gpgcheck false
     action :create
   end
-  
+
   execute 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
     command 'setenforce 0'
     action :run
-    not_if { `sestatus | sed -n -e 's/^Current mode: *//p'`.chomp == 'permissive'}
+    not_if { `sestatus | sed -n -e 's/^Current mode: *//p'`.chomp == 'permissive' }
   end
 end
 
@@ -110,7 +110,7 @@ package 'required packages' do
 end
 
 # install local mysql server for localtesting
-package 'mysql' do 
+package 'mysql' do
   package_name mysql_package
   action :install
   only_if { node['localmode'] == 'true' }
@@ -177,7 +177,7 @@ remote_file '/tmp/latest.tar.gz' do
   group ENV['APACHE_USER']
   mode '0755'
   action :create
-  not_if { ::File.exists?("#{ENV['WP_CONTENT_DIR']}/wp-config.php") }
+  not_if { ::File.exist?("#{ENV['WP_CONTENT_DIR']}/wp-config.php") }
 end
 
 # install WP package and copy content
