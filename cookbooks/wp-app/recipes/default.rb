@@ -32,7 +32,7 @@ when 'debian'
                  ]
   mysql_package = 'mysql-server'
   mysql_service = 'mysql'
-  apache_service = 'apache2'
+  ENV['APACHE_SERVICE'] = 'apache2'
   ENV['APACHE_USER'] = 'www-data'
 
 when 'rhel'
@@ -42,7 +42,7 @@ when 'rhel'
                  ]
   mysql_package = 'mysql-community-server'
   mysql_service = 'mysqld'
-  apache_service = 'httpd'
+  ENV['APACHE_SERVICE'] = 'httpd'
   ENV['APACHE_USER'] = 'apache'
 
 end
@@ -140,13 +140,13 @@ end
 # in situations when we change apache configs
 execute 'run apache configtest' do
   user 'root'
-  command 'apachectl configtest'
+  command "$APACHE_SERVICE -t"
   action :nothing
 end
 
 # this block is for cases when we need to reload apache
 service 'apache' do
-  service_name apache_service
+  service_name ENV['APACHE_SERVICE']
   action :nothing
 end
 
@@ -218,10 +218,6 @@ bash 'set permissions to wp directories and files' do
   find $WP_CONTENT_DIR -type f -exec chmod 644 {} \; > /dev/null
   EOH
   action :run
-end
-
-service apache_service do
-  action :nothing
 end
 
 # creating mysql dump file for importing into db
