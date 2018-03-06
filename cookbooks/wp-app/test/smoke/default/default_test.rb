@@ -16,3 +16,12 @@ end
 describe port(80), :skip do
   it { should_not be_listening }
 end
+
+ENV['EC2_ENDPOINT'] = 'localhost'
+ENV['USER'] = 'wordpressuser'
+ENV['PASSWORD'] = 'Drowssap1!'
+describe command("curl -v --data \"log=${USER}&pwd=${PASSWORD}&wp-submit=Log+In&testcookie=1\" \
+  --cookie 'wordpress_test_cookie=WP+Cookie+check' http://$EC2_ENDPOINT/wp-login.php 2>&1 | cat") do
+    its('stdout') { should match (/.*wordpress_logged_in.*/) }
+end
+

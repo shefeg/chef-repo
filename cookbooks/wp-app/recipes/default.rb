@@ -11,10 +11,10 @@ node.normal['localmode'] = 'true'
 if node['localmode'] == 'true'
   ENV['RDS_ENDPOINT'] = 'localhost'
   ENV['EC2_ENDPOINT'] = 'localhost'
-  credentials = data_bag_item('credentials', 'mysql_local')
-  ENV['DB_NAME'] = credentials['db_name']
-  ENV['USER'] = credentials['user']
-  ENV['PASSWORD'] = credentials['password']
+  # credentials = data_bag_item('credentials', 'mysql_local') - have troubles with data_bags and local testing
+  ENV['DB_NAME'] = 'wordpress'
+  ENV['USER'] = 'wordpressuser'
+  ENV['PASSWORD'] = 'Drowssap1!'
 else
   ENV['RDS_ENDPOINT'] = `cat /tmp/rds_endpoint.txt`.chomp
   ENV['EC2_ENDPOINT'] = `cat /tmp/ec2_endpoint.txt`.chomp
@@ -51,65 +51,43 @@ ENV['WP_CONTENT_DIR'] = '/var/www/html'
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
-  apt_repository 'php' do
-    uri 'ppa:ondrej/php'
-    components ['main']
-    action :add
+  for index in (0...node['debian']['repositories']['apt_repository'].length)
+    apt_repository node['debian']['repositories']['apt_repository'][index] do
+      uri node['debian']['repositories']['uri'][index]
+      components ["#{node['debian']['repositories']['components'][index]}"]
+      action :add
+    end
   end
 
   apt_update 'update'
 
 #---- RHEL ----
 when 'rhel'
-  yum_repository 'epel' do
-    description 'Extra Packages for Enterprise Linux 7 - $basearch'
-    baseurl "http://download.fedoraproject.org/pub/epel/7/$basearch"
-    enabled true
-    gpgcheck false
-    action :create
+  for index in (0...node['rhel']['repositories']['yum_repository'].length)
+    yum_repository node['rhel']['repositories']['yum_repository'][index] do
+      description node['rhel']['repositories']['description'][index]
+      baseurl node['rhel']['repositories']['baseurl'][index]
+      enabled true
+      gpgcheck false
+      action :create
+    end
   end
 
-  yum_repository 'mysql57-community' do
-    description 'MySQL 5.7 Community Server'
-    baseurl "http://repo.mysql.com/yum/mysql-5.7-community/el/7/$basearch/"
-    enabled true
-    gpgcheck false
-    action :create
-  end
-
-  yum_repository 'remi-safe' do
-    description "Safe Remi's RPM repository for Enterprise Linux 7 - $basearch"
-    mirrorlist 'http://cdn.remirepo.net/enterprise/7/safe/mirror'
-    enabled true
-    gpgcheck false
-    action :create
-  end
-
-  yum_repository 'remi-php72' do
-    description "Remi's PHP 7.2 RPM repository for Enterprise Linux 7 - $basearch"
-    mirrorlist 'http://cdn.remirepo.net/enterprise/7/php72/mirror'
-    enabled true
-    gpgcheck false
-    action :create
-  end
-
-  execute 'set SELINUX to permissive' do # or define apache rule: setsebool -P httpd_can_network_connect=true
+  execute 'setenforce 0' do # or define apache rule: setsebool -P httpd_can_network_connect=true
     user 'root'
-    command 'setenforce 0'
     action :run
     not_if { `sestatus | sed -n -e 's/^Current mode: *//p'`.chomp == 'permissive' }
   end
 end
 
-package 'required packages' do
-  package_name package_list
+package package_list do
   action :install
   notifies :run, 'bash[verify PHP installation]', :immediately
+  notifies :delete, "file[#{ENV['WP_CONTENT_DIR']}/index.html]", :immediately
 end
 
 # install local mysql server for localtesting
-package 'mysql' do
-  package_name mysql_package
+package mysql_package do
   action :install
   only_if { node['localmode'] == 'true' }
 end
@@ -123,17 +101,12 @@ end
 bash 'verify PHP installation' do
   user 'root'
   code <<-EOH
-  cat <<EOF > $WP_CONTENT_DIR/info.php
+  cat <<EOF > ${WP_CONTENT_DIR}/info.php
   <?php
   phpinfo();
   ?>
   EOF
-  if [[ $(curl localhost/info.php) = *"PHP Version 7"* ]]; then
-    echo "SUCCESS!"
-  else
-    exit 1
-  fi
-  rm -rf $WP_CONTENT_DIR/info.php
+  [[ $(curl localhost/info.php) = *"PHP Version 7"* ]] && rm -f ${WP_CONTENT_DIR}/info.php || rm -f ${WP_CONTENT_DIR}/info.php; exit 1;
   EOH
   action :nothing
 end
@@ -146,26 +119,23 @@ template "#{apache_config_dir}/wp.conf" do
   variables(SERVERNAME: ENV['EC2_ENDPOINT'],
             DOCUMENTROOT: ENV['WP_CONTENT_DIR'])
   action :create
-  notifies :run, 'execute[run apache configtest]', :immediately
-  notifies :reload, 'service[apache]', :immediately
+  notifies :run, 'execute[apachectl configtest]', :immediately
+  notifies :reload, "service[#{apache_service}]", :immediately
 end
 
 # in situations when we change apache configs
-execute 'run apache configtest' do
+execute 'apachectl configtest' do
   user 'root'
-  command 'apachectl configtest'
   action :nothing
   subscribes :run, 'bash[copy wp content]', :immediately
 end
 
 # this block is for cases when we need to reload apache
-service 'apache' do
-  service_name apache_service
+service apache_service do
   action [:enable, :start]
 end
 
-service 'mysql' do
-  service_name mysql_service
+service mysql_service do
   action [:enable, :start]
   only_if { node['localmode'] == 'true' }
 end
@@ -192,7 +162,8 @@ remote_file '/tmp/latest.tar.gz' do
   group ENV['APACHE_USER']
   mode '0755'
   action :create
-  not_if { ::File.exist?("#{ENV['WP_CONTENT_DIR']}/wp-config.php") }
+  not_if { ::File.exist?("#{ENV['WP_CONTENT_DIR']}/index.php") }
+  notifies :run, 'bash[copy wp content]', :immediately
 end
 
 # install WP package and copy content
@@ -217,7 +188,6 @@ template "#{ENV['WP_CONTENT_DIR']}/wp-config.php" do
             PASSWORD: ENV['PASSWORD'],
             DB_HOST: ENV['RDS_ENDPOINT'])
   action :create
-  notifies :run, 'bash[copy wp content]', :before
 end
 
 file "#{ENV['WP_CONTENT_DIR']}/index.html" do
