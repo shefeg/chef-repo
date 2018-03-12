@@ -31,10 +31,10 @@ ENV['WP_CONTENT_DIR'] = '/var/www/html'
 case node['platform_family']
 #---- DEBIAN ----
 when 'debian'
-  for index in (0...node['debian']['repositories']['apt_repository'].length)
-    apt_repository node['debian']['repositories']['apt_repository'][index] do
-      uri node['debian']['repositories']['uri'][index]
-      components ["#{node['debian']['repositories']['components'][index]}"]
+  for index in (0...node['repositories']['apt_repository'].length)
+    apt_repository node['repositories']['apt_repository'][index] do
+      uri node['repositories']['uri'][index]
+      components ["#{node['repositories']['components'][index]}"]
       action :add
     end
   end
@@ -43,10 +43,10 @@ when 'debian'
 
 #---- RHEL ----
 when 'rhel'
-  for index in (0...node['rhel']['repositories']['yum_repository'].length)
-    yum_repository node['rhel']['repositories']['yum_repository'][index] do
-      description node['rhel']['repositories']['description'][index]
-      baseurl node['rhel']['repositories']['baseurl'][index]
+  for index in (0...node['repositories']['yum_repository'].length)
+    yum_repository node['repositories']['yum_repository'][index] do
+      description node['repositories']['description'][index]
+      baseurl node['repositories']['baseurl'][index]
       enabled true
       gpgcheck false
       action :create
