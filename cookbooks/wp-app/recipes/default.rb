@@ -24,27 +24,7 @@ else
   ENV['PASSWORD'] = credentials['password']
 end
 
-case node['platform_family']
-when 'debian'
-  package_list = ['mysql-client', 'php7.0', 'php7.0-mysql', 'libapache2-mod-php7.0', 'php7.0-cli',
-                  'php7.0-cgi', 'php7.0-gd', 'apache2', 'apache2-utils', 'curl', 'rsync'
-                 ]
-  mysql_package = 'mysql-server'
-  mysql_service = 'mysql'
-  apache_service = 'apache2'
-  ENV['APACHE_USER'] = 'www-data'
-  apache_config_dir = '/etc/apache2/sites-enabled'
-when 'rhel'
-  package_list = ['mysql-community-client', 'php', 'php-common', 'php-mysqlnd', 'php-gd', 'php-xml',
-                  'php-mbstring', 'php-pecl-mcrypt', 'php-xmlrpc', 'httpd', 'curl', 'httpd', 'rsync'
-                 ]
-  mysql_package = 'mysql-community-server'
-  mysql_service = 'mysqld'
-  apache_service = 'httpd'
-  ENV['APACHE_USER'] = 'apache'
-  apache_config_dir = '/etc/httpd/conf.d'
-end
-
+ENV['APACHE_USER'] = node['apache']['user']
 ENV['WP_CONTENT_DIR'] = '/var/www/html'
 
 # set additional repositories for required packages installation and set selinux to permissive
@@ -80,14 +60,14 @@ when 'rhel'
   end
 end
 
-package package_list do
+package node['package_list'] do
   action :install
   notifies :run, 'bash[verify PHP installation]', :immediately
   notifies :delete, "file[#{ENV['WP_CONTENT_DIR']}/index.html]", :immediately
 end
 
 # install local mysql server for localtesting
-package mysql_package do
+package node['mysql']['package'] do
   action :install
   only_if { node['localmode'] == 'true' }
 end
@@ -111,7 +91,7 @@ bash 'verify PHP installation' do
   action :nothing
 end
 
-template "#{apache_config_dir}/wp.conf" do
+template "#{node['apache']['config_dir']}/wp.conf" do
   source 'wp.conf.erb'
   owner 'root'
   group 'root'
@@ -120,7 +100,7 @@ template "#{apache_config_dir}/wp.conf" do
             DOCUMENTROOT: ENV['WP_CONTENT_DIR'])
   action :create
   notifies :run, 'execute[apachectl configtest]', :immediately
-  notifies :reload, "service[#{apache_service}]", :immediately
+  notifies :reload, "service[#{node['apache']['service']}]", :immediately
 end
 
 # in situations when we change apache configs
@@ -131,11 +111,11 @@ execute 'apachectl configtest' do
 end
 
 # this block is for cases when we need to reload apache
-service apache_service do
+service node['apache']['service'] do
   action [:enable, :start]
 end
 
-service mysql_service do
+service node['mysql']['service'] do
   action [:enable, :start]
   only_if { node['localmode'] == 'true' }
 end
