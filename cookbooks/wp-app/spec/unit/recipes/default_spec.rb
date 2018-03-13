@@ -47,17 +47,17 @@ describe 'wp-app::default' do
     
     # TODO: add yum_repository test
     it "creates yum_repository add action" do
-      expect(chef_run).to add_yum_repository("#{node['rhel']['repositories']['yum_repository'][0]}")
+      expect(chef_run).to add_yum_repository('epel')
     end
     it "creates yum_repository add action" do
-      expect(chef_run).to add_yum_repository("#{node['rhel']['repositories']['yum_repository'][1]}")
+      expect(chef_run).to add_yum_repository('mysql57-community')
     end
     it "creates yum_repository add action" do
-      expect(chef_run).to add_yum_repository("#{node['rhel']['repositories']['yum_repository'][2]}")
+      expect(chef_run).to add_yum_repository('remi-safe')
     end
-    it "creates yum_repository add action" do
-      expect(chef_run).to add_yum_repository("#{node['rhel']['repositories']['yum_repository'][3]}")
-    end
+    # it "creates yum_repository add action" do
+    #   expect(chef_run).to add_yum_repository("#{node['repositories']['yum_repository'][3]}")
+    # end
     
     # it 'runs a execute setenforce 0' do
     #   expect(chef_run).to run_execute('setenforce 0').with(user: 'root')
