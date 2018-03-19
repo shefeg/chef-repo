@@ -19,9 +19,9 @@ describe 'wp-app::default' do
       expect { chef_run }.to_not raise_error
     end
 
-  #   it 'installs a apt_repositories with an explicit action' do
-  #     expect(chef_run).to add_apt_repository('php')
-  #   end
+    it 'installs a apt_repositories with an explicit action' do
+      expect(chef_run).to add_apt_repository('php')
+    end
   # end
   end
   context 'When all attributes are default, on CentOS 7.4.1708' do
@@ -48,13 +48,14 @@ describe 'wp-app::default' do
     # TODO: add yum_repository test
     it "creates yum_repository add action" do
       expect(chef_run).to add_yum_repository('epel')
-    end
-    it "creates yum_repository add action" do
       expect(chef_run).to add_yum_repository('mysql57-community')
     end
-    it "creates yum_repository add action" do
-      expect(chef_run).to add_yum_repository('remi-safe')
-    end
+    # it "creates yum_repository add action" do
+    #   expect(chef_run).to add_yum_repository('mysql57-community')
+    # end
+    # it "creates yum_repository add action" do
+    #   expect(chef_run).to add_yum_repository('remi-safe')
+    # end
     # it "creates yum_repository add action" do
     #   expect(chef_run).to add_yum_repository("#{node['repositories']['yum_repository'][3]}")
     # end
